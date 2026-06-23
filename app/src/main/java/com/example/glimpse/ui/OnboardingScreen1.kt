@@ -1,0 +1,71 @@
+package com.example.glimpse.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.*
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.scale
+
+@Composable
+fun OnboardingScreen1(){
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF050816))
+    ){
+        PresenceOrb(
+            color = Color(0xFFFF4081),
+            x=80.dp,
+            y=250.dp,
+            pulseDuration=1500
+        )
+        PresenceOrb(
+            color = Color(0xFFFFB74D),
+            x=180.dp,
+            y=420.dp,
+            pulseDuration=3000
+        )
+        PresenceOrb(
+            color = Color(0xFF7C4DFF),
+            x=50.dp,
+            y=600.dp,
+            pulseDuration=2200
+        )
+            PresenceOrb(
+            color = Color(0xFF26C6DA),
+            x=260.dp,
+            y=650.dp,
+            pulseDuration=1800
+        )
+
+    }
+}
+
+@Composable
+fun PresenceOrb(
+    color: Color,
+    x: androidx.compose.ui.unit.Dp,
+    y:androidx.compose.ui.unit.Dp,
+    pulseDuration:Int
+){
+   val infiniteTransition = rememberInfiniteTransition(label ="")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1F,
+        targetValue = 1.3F,
+        animationSpec = infiniteRepeatable(
+            animation = tween(pulseDuration),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    Box(
+        modifier = Modifier.offset(x=x,y=y).scale(scale).size(60.dp).background(color = color,
+            shape=CircleShape)
+    )
+
+}
