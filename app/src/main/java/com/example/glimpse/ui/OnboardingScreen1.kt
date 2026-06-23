@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.Alignment
 
 @Composable
 fun OnboardingScreen1(){
@@ -64,8 +65,28 @@ fun PresenceOrb(
         )
     )
     Box(
-        modifier = Modifier.offset(x=x,y=y).scale(scale).size(60.dp).background(color = color,
-            shape=CircleShape)
-    )
+        modifier = Modifier
+            .offset(x=x,y=y)
+            .scale(scale)
+            .size(80.dp),
+                contentAlignment = Alignment.Center
+    ){
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(
+                    color.copy(.2f),
+                    CircleShape
+                )
+        )
+        Box(
+            modifier=Modifier
+                .size(60.dp)
+                .background(
+                    color,
+                    CircleShape
+                )
+        )
+    }
 
 }
