@@ -14,6 +14,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
+import android.R.attr.x
 
 @Composable
 fun OnboardingScreen1(){
@@ -21,28 +22,34 @@ fun OnboardingScreen1(){
         modifier = Modifier.fillMaxSize().background(Color(0xFF050816))
     ){
         PresenceOrb(
-            color = Color(0xFFFF4081),
+            color = Color(0xFFFF8FAB),
             x=80.dp,
             y=250.dp,
             pulseDuration=1500
         )
         PresenceOrb(
-            color = Color(0xFFFFB74D),
+            color = Color(0xFFFFD6A5),
             x=180.dp,
             y=420.dp,
             pulseDuration=3000
         )
         PresenceOrb(
-            color = Color(0xFF7C4DFF),
+            color = Color(0xFFB8A1FF),
             x=50.dp,
             y=600.dp,
             pulseDuration=2200
         )
             PresenceOrb(
-            color = Color(0xFF26C6DA),
+            color = Color(0xFF8ECAE6),
             x=260.dp,
             y=650.dp,
             pulseDuration=1800
+        )
+        PresenceOrb(
+            color = Color(0xFFF4F7FF),
+            x=280.dp,
+            y=120.dp,
+            pulseDuration = 2700
         )
 
     }
@@ -64,9 +71,22 @@ fun PresenceOrb(
             repeatMode = RepeatMode.Reverse
         )
     )
+    val driftX by infiniteTransition.animateFloat(
+        initialValue = -40f,
+        targetValue = 40f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(5000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label=""
+
+    )
     Box(
         modifier = Modifier
-            .offset(x=x,y=y)
+            .offset(
+                x=x+driftX.dp,
+                y=y
+            )
             .scale(scale)
             .size(80.dp),
                 contentAlignment = Alignment.Center
