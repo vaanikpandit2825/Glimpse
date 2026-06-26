@@ -70,21 +70,12 @@ fun PresenceOrb(
             animation = tween(pulseDuration),
             repeatMode = RepeatMode.Reverse
         )
-    )
-    val driftX by infiniteTransition.animateFloat(
-        initialValue = -40f,
-        targetValue = 40f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(5000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label=""
+    )   
 
-    )
     Box(
         modifier = Modifier
             .offset(
-                x=x+driftX.dp,
+                x=x,
                 y=y
             )
             .scale(scale)
