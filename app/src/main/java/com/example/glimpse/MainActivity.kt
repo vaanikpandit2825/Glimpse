@@ -11,16 +11,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.glimpse.auth.SignupScreen
 import com.example.glimpse.ui.theme.GlimpseTheme
 import com.example.glimpse.ui.OnboardingScreen1
+import com.example.glimpse.auth.SignupScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             GlimpseTheme {
-               OnboardingScreen1()
+                SignupScreen()
             }
         }
     }
