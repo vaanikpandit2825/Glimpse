@@ -23,11 +23,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 @Composable
 fun SignupScreen(){
     var email by remember{mutableStateOf("")}
     var password by remember{mutableStateOf("")}
+    var passwordVisible by remember {mutableStateOf(false)}
     val viewModel: AuthViewModel=viewModel()
 
     Column(
@@ -63,7 +69,34 @@ fun SignupScreen(){
             label = {
                 Text("Password")
             },
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation =
+                if(passwordVisible)
+                    VisualTransformation.None
+                else
+                    PasswordVisualTransformation(),
+
+            trailingIcon = {
+                IconButton(
+                    onClick = {
+                        passwordVisible=!passwordVisible
+                    }
+                ) {
+                    Icon(
+                        imageVector =
+                            if(passwordVisible)
+                                Icons.Default.Visibility
+                            else
+                                Icons.Default.VisibilityOff,
+
+                        contentDescription =
+                                        if(passwordVisible)
+                                                              "Hide Password"
+                                                          else
+                                                               "Show Password"
+                    )
+                }
+            },
+
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(24.dp))
