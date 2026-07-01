@@ -59,7 +59,7 @@ private val GoogleBg       = Color(0xFF1E1E1E)
 private val LabelGray      = Color(0xFF888888)
 private val DividerGray    = Color(0xFF2A2A2A)
 
-private val ColumnTopPad   = 195.dp
+private val ColumnTopPad   = 120.dp
 private val ColumnStartPad = 24.dp
 private val ColumnEndPad   = 16.dp
 private val ColumnFraction = 0.80f
@@ -67,7 +67,7 @@ private val FieldHeight    = 58.dp
 private val FieldCorner    = 12.dp
 private val ButtonHeight   = 54.dp
 private val ButtonCorner   = 14.dp
-private val LogoSlotHeight = 64.dp
+private val LogoSlotHeight = 0.dp
 
 @Composable
 fun SignupScreen() {
