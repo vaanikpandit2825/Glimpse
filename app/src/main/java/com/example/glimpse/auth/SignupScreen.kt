@@ -1,5 +1,6 @@
 package com.example.glimpse.auth
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -22,8 +24,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,26 +51,38 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.R
+import com.example.glimpse.ui.theme.GlimpseFonts
 
-private val AccentBlue = Color(0xFF6EA8FF)
-private val FieldBg = Color(0xFF1A1A1A)
-private val LabelGray = Color(0xFF888888)
-private val DividerGray = Color(0xFF2A2A2A)
+private val AccentBlue     = Color(0xFF6EA8FF)
+private val FieldBg        = Color(0xFF1C1C1C)
+private val GoogleBg       = Color(0xFF1E1E1E)
+private val LabelGray      = Color(0xFF888888)
+private val DividerGray    = Color(0xFF2A2A2A)
+
+private val ColumnTopPad   = 195.dp
+private val ColumnStartPad = 24.dp
+private val ColumnEndPad   = 16.dp
+private val ColumnFraction = 0.80f
+private val FieldHeight    = 58.dp
+private val FieldCorner    = 12.dp
+private val ButtonHeight   = 54.dp
+private val ButtonCorner   = 14.dp
+private val LogoSlotHeight = 64.dp
 
 @Composable
 fun SignupScreen() {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email           by remember { mutableStateOf("") }
+    var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val viewModel: AuthViewModel = viewModel()
 
     Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
-            painter = painterResource(id = R.drawable.signup_bg),
+            painter            = painterResource(R.drawable.signup_bg),
             contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            contentScale       = ContentScale.Crop,
+            modifier           = Modifier.fillMaxSize()
         )
 
         Box(
@@ -74,10 +90,11 @@ fun SignupScreen() {
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.90f),
-                            Color.Black.copy(alpha = 0.55f),
-                            Color.Transparent
+                        colorStops = arrayOf(
+                            0.00f to Color.Black.copy(alpha = 0.72f),
+                            0.48f to Color.Black.copy(alpha = 0.42f),
+                            0.74f to Color.Black.copy(alpha = 0.08f),
+                            1.00f to Color.Transparent
                         )
                     )
                 )
@@ -89,9 +106,9 @@ fun SignupScreen() {
                 .background(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0.0f to Color.Transparent,
-                            0.45f to Color.Transparent,
-                            1.0f to Color.Black.copy(alpha = 0.75f)
+                            0.00f to Color.Transparent,
+                            0.50f to Color.Transparent,
+                            1.00f to Color.Black.copy(alpha = 0.70f)
                         )
                     )
                 )
@@ -99,202 +116,251 @@ fun SignupScreen() {
 
         Column(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .fillMaxWidth(0.70f)
+                .fillMaxWidth(ColumnFraction)
                 .padding(
-                    start = 28.dp,
-                    end = 16.dp,
-                    top = 32.dp
+                    start = ColumnStartPad,
+                    top   = ColumnTopPad,
+                    end   = ColumnEndPad
                 ),
             verticalArrangement = Arrangement.Top
         ) {
 
+            Box(modifier = Modifier.height(LogoSlotHeight))
+
+            Spacer(Modifier.height(10.dp))
+
             Text(
-                text = "Glimpse",
+                text  = "Glimpse",
                 color = Color.White,
                 style = TextStyle(
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontFamily    = GlimpseFonts.PlayfairDisplay,
+                    fontSize      = 52.sp,
+                    fontWeight    = FontWeight.Normal,
                     letterSpacing = (-0.5).sp
                 )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
 
             Text(
-                text = "The people who matter,\nalways close.",
-                color = Color.White.copy(alpha = 0.75f),
+                text  = "The people who matter,\nalways close.",
+                color = Color.White.copy(alpha = 0.72f),
                 style = TextStyle(
-                    fontSize = 15.sp,
+                    fontSize   = 15.sp,
                     fontWeight = FontWeight.Normal,
                     lineHeight = 22.sp
                 )
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(0.75f)
+                modifier          = Modifier.fillMaxWidth(0.78f)
             ) {
                 HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = DividerGray,
-                    thickness = 0.5.dp
+                    modifier  = Modifier.weight(1f),
+                    color     = DividerGray,
+                    thickness = 0.6.dp
                 )
                 Text(
-                    text = "  ✦  ",
-                    color = Color.White.copy(alpha = 0.35f),
+                    text  = "  ✦  ",
+                    color = Color.White.copy(alpha = 0.30f),
                     style = TextStyle(fontSize = 10.sp)
                 )
                 HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = DividerGray,
-                    thickness = 0.5.dp
+                    modifier  = Modifier.weight(1f),
+                    color     = DividerGray,
+                    thickness = 0.6.dp
                 )
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(Modifier.height(24.dp))
 
-            Text(
-                text = "EMAIL",
-                color = LabelGray,
-                style = TextStyle(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.2.sp
-                )
-            )
+            FieldLabel("EMAIL")
 
-            Spacer(modifier = Modifier.height(7.dp))
+            Spacer(Modifier.height(7.dp))
 
-            TextField(
-                value = email,
+            OutlinedTextField(
+                value         = email,
                 onValueChange = { email = it },
-                placeholder = {
+                placeholder   = {
                     Text(
-                        text = "you@example.com",
-                        color = Color.White.copy(alpha = 0.30f),
+                        text  = "you@example.com",
+                        color = Color.White.copy(alpha = 0.28f),
                         style = TextStyle(fontSize = 14.sp)
                     )
                 },
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = FieldBg,
-                    unfocusedContainerColor = FieldBg,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = AccentBlue,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(12.dp),
-                textStyle = TextStyle(fontSize = 14.sp, color = Color.White),
-                modifier = Modifier
+                singleLine    = true,
+                colors        = glimpseFieldColors(),
+                shape         = RoundedCornerShape(FieldCorner),
+                textStyle     = TextStyle(fontSize = 14.sp, color = Color.White),
+                modifier      = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(FieldHeight)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
-            Text(
-                text = "PASSWORD",
-                color = LabelGray,
-                style = TextStyle(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.2.sp
-                )
-            )
+            FieldLabel("PASSWORD")
 
-            Spacer(modifier = Modifier.height(7.dp))
+            Spacer(Modifier.height(7.dp))
 
-            TextField(
-                value = password,
-                onValueChange = { password = it },
-                placeholder = {
+            OutlinedTextField(
+                value                = password,
+                onValueChange        = { password = it },
+                placeholder          = {
                     Text(
-                        text = "••••••••••",
-                        color = Color.White.copy(alpha = 0.30f),
+                        text  = "••••••••••",
+                        color = Color.White.copy(alpha = 0.28f),
                         style = TextStyle(fontSize = 14.sp)
                     )
                 },
-                singleLine = true,
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
+                singleLine           = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+                trailingIcon         = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
-                            tint = Color.White.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
+                            imageVector        = if (passwordVisible) Icons.Default.Visibility
+                            else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide password"
+                            else "Show password",
+                            tint               = Color.White.copy(alpha = 0.45f),
+                            modifier           = Modifier.size(20.dp)
                         )
                     }
                 },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = FieldBg,
-                    unfocusedContainerColor = FieldBg,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = AccentBlue,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(12.dp),
-                textStyle = TextStyle(fontSize = 14.sp, color = Color.White),
-                modifier = Modifier
+                colors               = glimpseFieldColors(),
+                shape                = RoundedCornerShape(FieldCorner),
+                textStyle            = TextStyle(fontSize = 14.sp, color = Color.White),
+                modifier             = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(FieldHeight)
             )
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = {
+                onClick  = {
                     viewModel.signUp(
-                        email = email,
-                        password = password,
-                        onSuccess = { println("SignUp Successful") },
-                        onFailure = { println(it) }
+                        email     = email,
+                        password  = password,
+                        onSuccess = {},
+                        onFailure = {}
                     )
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(14.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                shape    = RoundedCornerShape(ButtonCorner),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(ButtonHeight)
             ) {
                 Text(
-                    text = "Continue",
-                    color = Color.White,
+                    text  = "Continue",
+                    color = Color.Black,
                     style = TextStyle(
-                        fontSize = 15.sp,
+                        fontSize   = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier          = Modifier.fillMaxWidth()
+            ) {
+                HorizontalDivider(
+                    modifier  = Modifier.weight(1f),
+                    color     = DividerGray,
+                    thickness = 0.6.dp
+                )
+                Text(
+                    text  = "  OR  ",
+                    color = LabelGray,
+                    style = TextStyle(
+                        fontSize      = 11.sp,
+                        fontWeight    = FontWeight.Medium,
+                        letterSpacing = 1.2.sp
+                    )
+                )
+                HorizontalDivider(
+                    modifier  = Modifier.weight(1f),
+                    color     = DividerGray,
+                    thickness = 0.6.dp
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick  = {},
+                colors   = ButtonDefaults.outlinedButtonColors(containerColor = GoogleBg),
+                border   = BorderStroke(0.6.dp, DividerGray),
+                shape    = RoundedCornerShape(ButtonCorner),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(ButtonHeight)
+            ) {
+
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text  = "Continue with Google",
+                    color = Color.White.copy(alpha = 0.88f),
+                    style = TextStyle(
+                        fontSize   = 14.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                )
+            }
+
+            Spacer(Modifier.height(28.dp))
 
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = Color.White.copy(alpha = 0.45f), fontSize = 13.sp)) {
+                    withStyle(SpanStyle(
+                        color    = Color.White.copy(alpha = 0.42f),
+                        fontSize = 13.sp
+                    )) {
                         append("Already have an account? ")
                     }
-                    withStyle(
-                        SpanStyle(
-                            color = AccentBlue,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    ) {
+                    withStyle(SpanStyle(
+                        color      = AccentBlue,
+                        fontSize   = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )) {
                         append("Sign in")
                     }
                 },
-                modifier = Modifier.clickable { }
+                modifier = Modifier.clickable {}
             )
         }
     }
 }
+
+@Composable
+private fun FieldLabel(text: String) {
+    Text(
+        text  = text,
+        color = LabelGray,
+        style = TextStyle(
+            fontSize      = 11.sp,
+            fontWeight    = FontWeight.Medium,
+            letterSpacing = 1.2.sp
+        )
+    )
+}
+
+@Composable
+private fun glimpseFieldColors(): TextFieldColors = TextFieldDefaults.colors(
+    focusedContainerColor   = FieldBg,
+    unfocusedContainerColor = FieldBg,
+    focusedTextColor        = Color.White,
+    unfocusedTextColor      = Color.White,
+    cursorColor             = AccentBlue,
+    focusedIndicatorColor   = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+    disabledIndicatorColor  = Color.Transparent
+)
