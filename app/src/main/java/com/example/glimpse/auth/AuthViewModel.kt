@@ -19,4 +19,17 @@ class AuthViewModel : ViewModel(){
             onFailure=onFailure
         )
     }
+    fun login(
+        email: String,
+        password: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        repository.login(
+            email,
+            password,
+            onSuccess,
+            onFailure
+        )
+    }
 }
