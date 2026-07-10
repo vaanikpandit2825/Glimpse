@@ -76,6 +76,7 @@ fun SignupScreen() {
     var passwordVisible by remember { mutableStateOf(false) }
     val viewModel: AuthViewModel = viewModel()
 
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         Image(

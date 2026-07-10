@@ -247,7 +247,9 @@ fun LoginScreen() {
                     viewModel.login(
                         email     = email,
                         password  = password,
-                        onSuccess = {},
+                        onSuccess = {
+
+                        },
                         onFailure = {}
                     )
                 },
