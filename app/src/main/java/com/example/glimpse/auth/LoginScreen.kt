@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.R
 import com.example.glimpse.ui.theme.GlimpseFonts
+import androidx.navigation.NavController
 
 private val AccentBlue     = Color(0xFF6EA8FF)
 private val FieldBg        = Color(0xFF1C1C1C)
@@ -70,7 +71,9 @@ private val ButtonCorner   = 14.dp
 private val LogoSlotHeight = 0.dp
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    navController : NavController
+) {
     var email           by remember { mutableStateOf("") }
     var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
