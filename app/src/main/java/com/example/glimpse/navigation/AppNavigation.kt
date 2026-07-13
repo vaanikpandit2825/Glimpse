@@ -17,10 +17,10 @@ fun AppNavigation(){
     )
     {
         composable("signup"){
-            SignupScreen()
+            SignupScreen(navController)
         }
         composable("login"){
-            LoginScreen()
+            LoginScreen(navController)
         }
         composable("home"){
             HomeScreen()
