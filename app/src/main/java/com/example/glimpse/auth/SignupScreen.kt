@@ -338,7 +338,9 @@ fun SignupScreen(
                         append("Sign in")
                     }
                 },
-                modifier = Modifier.clickable {}
+                modifier = Modifier.clickable {
+                    navController.navigate("login")
+                }
             )
         }
     }
