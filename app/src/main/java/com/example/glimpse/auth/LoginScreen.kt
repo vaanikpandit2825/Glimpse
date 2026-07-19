@@ -78,6 +78,7 @@ fun LoginScreen(
     var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val viewModel: AuthViewModel = viewModel()
+    var errorMessage by remember{mutableStateOf("")}
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -247,14 +248,27 @@ fun LoginScreen(
 
             Button(
                 onClick  = {
+                    if(email.isBlank()){
+                        errorMessage = "Please enter the email id"
+                    }
+                    else if(password.isBlank()){
+                        errorMessage = "Please enter the password"
+                    }
+                    else{
+
+                    errorMessage=""
+
                     viewModel.login(
                         email     = email,
                         password  = password,
                         onSuccess = {
 
                         },
-                        onFailure = {}
+                        onFailure = {
+                            errorMessage = it.message ?: "Login failed"
+                        }
                     )
+                    }
                 },
                 colors   = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                 shape    = RoundedCornerShape(ButtonCorner),
