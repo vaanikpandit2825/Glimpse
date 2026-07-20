@@ -256,16 +256,32 @@ fun LoginScreen(
                     }
                     else{
 
-                    errorMessage=""
 
+                        errorMessage=""
                     viewModel.login(
                         email     = email,
                         password  = password,
                         onSuccess = {
-
+                            navController.navigate("login"){
+                                popUpTo("login"){
+                                    inclusive=true
+                                }
+                            }
                         },
+
                         onFailure = {
-                            errorMessage = it.message ?: "Login failed"
+                            errorMessage = when{
+                                it.message?.contains("password",true)==true->
+                                    "Incorrect Password"
+                                it.message?.contains("no user",true)==true->
+                                    "No account found with this email"
+                                it.message?.contains("badly formatted",true)==true->
+                                    "Please enter a valid email"
+
+                                else->
+                                    "Login Faile. Please try again later"
+                            }
+
                         }
                     )
                     }
