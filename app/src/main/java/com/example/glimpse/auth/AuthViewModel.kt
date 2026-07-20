@@ -10,13 +10,13 @@ class AuthViewModel : ViewModel(){
         email:String,
         password:String,
         onSuccess:()->Unit,
-        onFailure:(String)->Unit
+        onFailure:(Exception)->Unit
     ){
         repository.signUp(
-            email=email,
-            password=password,
-            onSuccess=onSuccess,
-            onFailure=onFailure
+            email,
+            password,
+            onSuccess,
+            onFailure
         )
     }
     fun login(
