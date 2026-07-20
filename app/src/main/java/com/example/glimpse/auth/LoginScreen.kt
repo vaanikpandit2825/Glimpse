@@ -262,7 +262,7 @@ fun LoginScreen(
                         email     = email,
                         password  = password,
                         onSuccess = {
-                            navController.navigate("login"){
+                            navController.navigate("home"){
                                 popUpTo("login"){
                                     inclusive=true
                                 }
