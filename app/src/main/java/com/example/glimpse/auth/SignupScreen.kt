@@ -78,6 +78,7 @@ fun SignupScreen(
     var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val viewModel: AuthViewModel = viewModel()
+    var errorMessage by remember{mutableStateOf("")}
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -247,13 +248,37 @@ fun SignupScreen(
 
             Button(
                 onClick  = {
-                    viewModel.signUp(
-                        email     = email,
-                        password  = password,
-                        onSuccess = {},
-                        onFailure = {}
-                    )
-                },
+                    if(email.isBlank())
+                        errorMessage = "Please enter the email address"
+                    else if(password.isBlank())
+                        errorMessage = "Please enter the password"
+                    else
+                        errorMessage=""
+
+                        viewModel.signUp(
+                            email     = email,
+                            password  = password,
+                            onSuccess = {
+                                navController.navigate("home"){
+                                    popUpTo("signUp"){
+                                        inclusive=true
+                                    }
+                                }
+                            },
+                            onFailure = {
+                                errorMessage = when{
+                                    it.message?.contains("password",true)==true->
+                                        "Password must be atleast 6 letters"
+                                    it.message?.contains("already",true)==true->
+                                        "User with this mail already exists"
+                                    it.message?.contains("badly formatted",true)==true->
+                                        "Please enter a valid email address"
+                                    else ->
+                                        "SignUp failed Please try again later"
+                                }
+                            }
+                        )
+                    },
                 colors   = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                 shape    = RoundedCornerShape(ButtonCorner),
                 modifier = Modifier
