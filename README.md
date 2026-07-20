@@ -1,6 +1,6 @@
 <div align="center">
 
-# ✨ Glimpse
+#  Glimpse
 
 ### *Meet. Connect. Belong.*
 
@@ -17,7 +17,7 @@ A modern Android social platform built with **Kotlin**, **Jetpack Compose**, and
 
 ---
 
-## 🚀 About
+##  About
 
 Glimpse is a modern Android application focused on helping people discover and build meaningful social connections through a clean, premium, and intuitive experience.
 
