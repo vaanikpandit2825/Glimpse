@@ -9,14 +9,14 @@ class AuthRepository{
         email:String,
         password:String,
         onSuccess:()->Unit,
-        onFailure:(String)->Unit
+        onFailure:(Exception)->Unit
     ){
         auth.createUserWithEmailAndPassword(email,password)
             .addOnSuccessListener{
                 onSuccess()
             }
             .addOnFailureListener {
-                onFailure(it.message ?: "Unknown Error")
+                onFailure(it)
             }
     }
     fun login(
