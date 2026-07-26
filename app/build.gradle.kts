@@ -1,3 +1,4 @@
+import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -5,6 +6,13 @@ plugins {
 }
 
 android {
+    val localProperties = Properties().apply {
+        load(rootProject.file("local.properties").inputStream())
+    }
+
+    val maptilerApiKey = localProperties.getProperty("MAPTILER_API_KEY") ?: "NOT_FOUND"
+
+
     namespace = "com.example.glimpse"
     compileSdk = 36
 
@@ -14,8 +22,12 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "MAPTILER_API_KEY",
+            "\"$maptilerApiKey\""
+        )
     }
 
     buildTypes {
@@ -35,6 +47,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig=true
     }
 }
 
@@ -60,4 +73,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.9.0")
+    implementation(libs.maplibre.compose) {
+        exclude(group = "org.maplibre.gl", module = "android-sdk")
+    }
+
+    implementation(libs.maplibre.android.opengl)
 }
