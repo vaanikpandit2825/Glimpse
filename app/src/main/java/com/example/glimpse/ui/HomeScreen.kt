@@ -2,45 +2,35 @@ package com.example.glimpse.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
-import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
+import org.maplibre.compose.map.MaplibreMap
+import org.maplibre.compose.style.BaseStyle
+import com.example.glimpse.BuildConfig
 
 
 @Composable
-fun HomeScreen(
-    navController: NavController
-) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Welcome To Glimpse")
+    fun HomeScreen(
+    navController:NavController
+){
+    Scaffold {  innerPadding ->
+        Box(
+             modifier=Modifier.fillMaxSize()
+                 .padding(innerPadding)
+                ) {
 
-        Spacer(modifier = Modifier.height(16.dp))
+            android.util.Log.d("MAP_KEY", BuildConfig.MAPTILER_API_KEY)
 
-        Button(
-            onClick={
-                FirebaseAuth.getInstance().signOut()
-                navController.navigate("signup"){
-                    popUpTo("home"){
-                        inclusive=true
-                    }
-                }
-            }
-        ){
-            Text("Logout")
+            MaplibreMap(
+                modifier = Modifier.fillMaxSize(),
+                baseStyle = BaseStyle.Uri(
+                    "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+                )
+            )
         }
+
     }
 }
