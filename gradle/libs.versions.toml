@@ -52,6 +52,10 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
+maplibre-compose = { module = "org.maplibre.compose:maplibre-compose", version = "0.13.0" }
+
+maplibre-android-opengl = { module = "org.maplibre.gl:android-sdk-opengl", version = "13.0.2" }
+
 [plugins]
 
 android-application = { id = "com.android.application", version.ref = "agp" }
