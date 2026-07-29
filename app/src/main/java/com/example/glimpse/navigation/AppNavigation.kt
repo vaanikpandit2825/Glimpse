@@ -6,7 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.glimpse.auth.SignupScreen
 import com.example.glimpse.auth.LoginScreen
-import com.example.glimpse.ui.HomeScreen
+import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
