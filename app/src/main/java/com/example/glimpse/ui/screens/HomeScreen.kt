@@ -10,6 +10,9 @@ import androidx.navigation.NavController
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.style.BaseStyle
 import com.example.glimpse.BuildConfig
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.example.glimpse.ui.components.TopControls
 
 
 @Composable
@@ -26,6 +29,12 @@ fun HomeScreen(
                 baseStyle = BaseStyle.Uri(
                     "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
                 )
+            )
+            TopControls(
+                modifier=Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top=12.dp)
+
             )
         }
 
