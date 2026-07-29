@@ -78,4 +78,5 @@ dependencies {
     }
 
     implementation(libs.maplibre.android.opengl)
+    implementation("androidx.compose.material:material-icons-extended")
 }
