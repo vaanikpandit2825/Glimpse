@@ -3,6 +3,7 @@ package com.example.glimpse.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -12,6 +13,7 @@ import org.maplibre.compose.style.BaseStyle
 import com.example.glimpse.BuildConfig
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import com.example.glimpse.ui.components.MyLocationButton
 import com.example.glimpse.ui.components.TopControls
 
 
@@ -36,7 +38,17 @@ fun HomeScreen(
                     .padding(top=12.dp)
 
             )
-        }
+            MyLocationButton(
+                modifier= Modifier
+                    .align(Alignment.Center)
+                    .padding(
+                        end=20.dp,
+                        bottom=100.dp
+                    ),
+                onClick = {
 
+                }
+            )
+        }
     }
 }
