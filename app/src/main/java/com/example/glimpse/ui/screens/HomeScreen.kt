@@ -13,6 +13,15 @@ import org.maplibre.compose.style.BaseStyle
 import com.example.glimpse.BuildConfig
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import com.example.glimpse.ui.components.FriendRow
+import com.example.glimpse.ui.components.FriendsBottomSheet
+import com.example.glimpse.ui.components.MyLocationButton
+import com.example.glimpse.ui.components.TopControls
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import com.example.glimpse.model.Friend
+import com.example.glimpse.R
+import com.example.glimpse.ui.components.FriendsBottomSheet
 import com.example.glimpse.ui.components.MyLocationButton
 import com.example.glimpse.ui.components.TopControls
 
@@ -22,6 +31,29 @@ fun HomeScreen(
     navController:NavController
 ){
     Scaffold {  innerPadding ->
+        val friends = listOf(
+            Friend(
+                id = "1",
+                name = "Aryan",
+                avatar = R.drawable.ic_launcher_foreground, // Temporary
+                location = "SRM Library",
+                lastSeen = "Just now"
+            ),
+            Friend(
+                id = "2",
+                name = "Riya",
+                avatar = R.drawable.ic_launcher_foreground,
+                location = "Hostel",
+                lastSeen = "2 min ago"
+            ),
+            Friend(
+                id = "3",
+                name = "Sam",
+                avatar = R.drawable.ic_launcher_foreground,
+                location = "Main Gate",
+                lastSeen = "5 min ago"
+            )
+        )
         Box(
             modifier=Modifier.fillMaxSize()
                 .padding(innerPadding)
@@ -48,6 +80,10 @@ fun HomeScreen(
                 onClick = {
 
                 }
+            )
+            FriendsBottomSheet(
+                friends=friends,
+                modifier=Modifier.align(Alignment.BottomCenter)
             )
         }
     }
