@@ -3,34 +3,27 @@ package com.example.glimpse.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.glimpse.BuildConfig
+import com.example.glimpse.R
+import com.example.glimpse.model.Friend
+import com.example.glimpse.ui.components.FriendsBottomSheet
+import com.example.glimpse.ui.components.MyLocationButton
+import com.example.glimpse.ui.components.TopControls
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.style.BaseStyle
-import com.example.glimpse.BuildConfig
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
-import com.example.glimpse.ui.components.FriendRow
-import com.example.glimpse.ui.components.FriendsBottomSheet
-import com.example.glimpse.ui.components.MyLocationButton
-import com.example.glimpse.ui.components.TopControls
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import com.example.glimpse.model.Friend
-import com.example.glimpse.R
-import com.example.glimpse.ui.components.FriendsBottomSheet
-import com.example.glimpse.ui.components.MyLocationButton
-import com.example.glimpse.ui.components.TopControls
 
 
 @Composable
 fun HomeScreen(
-    navController:NavController
-){
-    Scaffold {  innerPadding ->
+    navController: NavController
+) {
+    Scaffold { innerPadding ->
         val friends = listOf(
             Friend(
                 id = "1",
@@ -55,35 +48,33 @@ fun HomeScreen(
             )
         )
         Box(
-            modifier=Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
                 .padding(innerPadding)
         ) {
+
             MaplibreMap(
                 modifier = Modifier.fillMaxSize(),
                 baseStyle = BaseStyle.Uri(
                     "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
                 )
             )
+
             TopControls(
-                modifier=Modifier
+                modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top=12.dp)
-
+                    .padding(top = 20.dp, start = 20.dp, end = 20.dp)
             )
+
             MyLocationButton(
-                modifier= Modifier
-                    .align(Alignment.Center)
-                    .padding(
-                        end=20.dp,
-                        bottom=100.dp
-                    ),
-                onClick = {
-
-                }
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 20.dp)
             )
+
             FriendsBottomSheet(
-                friends=friends,
-                modifier=Modifier.align(Alignment.BottomCenter)
+                friends = friends,
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
     }
