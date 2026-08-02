@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun MyLocationButton(
-    modifier: Modifier=Modifier,
-    onClick:()->Unit
-){
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+)   {
     Box(
         modifier=Modifier
             .size(56.dp)
