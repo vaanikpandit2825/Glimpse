@@ -14,8 +14,16 @@ object GlimpseDimens {
     val PaddingLarge = 24.dp
 
     val ButtonHeight = 52.dp
+    val BottomSheetPeekHeight = 360.dp
+    val TopBarHeight = 56.dp
+    val ChipHeight = 36.dp
+
+    val CardElevation = 2.dp
+    val SheetElevation = 8.dp
+
+    val DragHandleWidth = 40.dp
+    val DragHandleHeight = 5.dp
 
     val Avatar = 48.dp
-
     val Icon = 24.dp
 }
