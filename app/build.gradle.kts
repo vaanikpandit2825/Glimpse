@@ -76,7 +76,10 @@ dependencies {
     implementation(libs.maplibre.compose) {
         exclude(group = "org.maplibre.gl", module = "android-sdk")
     }
-
     implementation(libs.maplibre.android.opengl)
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-database")
 }
