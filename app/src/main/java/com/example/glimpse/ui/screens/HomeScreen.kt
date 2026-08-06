@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.glimpse.BuildConfig
+import com.example.glimpse.Location.RequestLocationPermission
 import com.example.glimpse.R
 import com.example.glimpse.model.Friend
 import com.example.glimpse.ui.components.BottomSheets.CheckInBottomSheet
@@ -20,14 +21,29 @@ import com.example.glimpse.ui.components.MyLocationButton
 import com.example.glimpse.ui.components.TopControls
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.style.BaseStyle
-
+import androidx.compose.ui.platform.LocalContext
+import com.example.glimpse.Location.LocationRepository
+import android.util.Log
+import com.example.glimpse.firebase.FirebaseRepository
 @Composable
 fun HomeScreen(
     navController: NavController
 ) {
 
+    var locationPermissionGranted by remember {
+        mutableStateOf(false)
+    }
+
     var showCheckInSheet by remember {
         mutableStateOf(false)
+    }
+    val context = LocalContext.current
+
+    val locationRepository = remember {
+        LocationRepository(context)
+    }
+    val firebaseRepository = remember {
+        FirebaseRepository()
     }
 
     Scaffold { innerPadding ->
@@ -60,7 +76,39 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-        ) {
+        ){
+
+            if(!locationPermissionGranted){
+                RequestLocationPermission(
+                    onPermissionGranted = {
+                        locationPermissionGranted = true
+
+                        locationRepository.getCurrentLocation { location ->
+
+                            if (location != null) {
+
+                                Log.d(
+                                    "GLIMPSE_LOCATION",
+                                    "Lat: ${location.latitude}, Lng: ${location.longitude}"
+                                )
+
+                                firebaseRepository.updateLocation(
+                                    uid = "test_user",
+                                    latitude = location.latitude,
+                                    longitude = location.longitude
+                                )
+
+                                Log.d("FIREBASE", "Location Uploaded")
+
+                            } else {
+
+                                Log.d("FIREBASE", "Location is null")
+
+                            }
+                        }
+                    }
+                )
+            }
 
             MaplibreMap(
                 modifier = Modifier.fillMaxSize(),
