@@ -31,6 +31,7 @@ import org.maplibre.compose.camera.CameraPosition
 import androidx.compose.runtime.rememberCoroutineScope
 import org.maplibre.compose.camera.CameraState
 import org.maplibre.spatialk.geojson.Position
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun HomeScreen(
@@ -54,6 +55,8 @@ fun HomeScreen(
     }
     val scope=rememberCoroutineScope()
     val cameraState=rememberCameraState()
+
+    val currentUser=FirebaseAuth.getInstance().currentUser
 
     Scaffold { innerPadding ->
 
@@ -113,8 +116,12 @@ fun HomeScreen(
                                     )
                                 }
 
+
+                                Log.d("AUTH", "Current user = $currentUser")
+                                Log.d("AUTH", "UID = ${currentUser?.uid}")
+                                val uid = currentUser?.uid ?: return@getCurrentLocation
                                 firebaseRepository.updateLocation(
-                                    uid = "test_user",
+                                    uid = uid,
                                     latitude = location.latitude,
                                     longitude = location.longitude
                                 )
