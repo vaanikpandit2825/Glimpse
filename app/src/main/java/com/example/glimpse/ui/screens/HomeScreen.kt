@@ -25,6 +25,13 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.glimpse.Location.LocationRepository
 import android.util.Log
 import com.example.glimpse.firebase.FirebaseRepository
+import org.maplibre.compose.camera.rememberCameraState
+import kotlinx.coroutines.launch
+import org.maplibre.compose.camera.CameraPosition
+import androidx.compose.runtime.rememberCoroutineScope
+import org.maplibre.compose.camera.CameraState
+import org.maplibre.spatialk.geojson.Position
+
 @Composable
 fun HomeScreen(
     navController: NavController
@@ -45,6 +52,8 @@ fun HomeScreen(
     val firebaseRepository = remember {
         FirebaseRepository()
     }
+    val scope=rememberCoroutineScope()
+    val cameraState=rememberCameraState()
 
     Scaffold { innerPadding ->
 
@@ -92,6 +101,18 @@ fun HomeScreen(
                                     "Lat: ${location.latitude}, Lng: ${location.longitude}"
                                 )
 
+                                scope.launch{
+                                    cameraState.animateTo(
+                                        CameraPosition(
+                                            target = Position(
+                                                location.longitude,
+                                                location.latitude
+                                            ),
+                                            zoom=16.0
+                                        )
+                                    )
+                                }
+
                                 firebaseRepository.updateLocation(
                                     uid = "test_user",
                                     latitude = location.latitude,
@@ -114,7 +135,8 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 baseStyle = BaseStyle.Uri(
                     "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
-                )
+                ),
+                cameraState=cameraState
             )
 
             TopControls(
