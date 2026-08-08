@@ -52,7 +52,19 @@ fun HomeScreen(
     }
     val firebaseRepository = remember {
         FirebaseRepository()
+
     }
+    LaunchedEffect(Unit) {
+        firebaseRepository.getUsersLocations { locations ->
+            locations.forEach { user ->
+                Log.d(
+                    "FIREBASE_USERS",
+                    "UID: ${user.uid}, Lat: ${user.latitude}, Lng: ${user.longitude}"
+                )
+            }
+        }
+    }
+
     val scope=rememberCoroutineScope()
     val cameraState=rememberCameraState()
 
