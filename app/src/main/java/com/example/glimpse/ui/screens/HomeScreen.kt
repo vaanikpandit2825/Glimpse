@@ -57,6 +57,7 @@ fun HomeScreen(
     val cameraState=rememberCameraState()
 
     val currentUser=FirebaseAuth.getInstance().currentUser
+    Log.d("Auth","Current user:${currentUser?.uid}")
 
     Scaffold { innerPadding ->
 
