@@ -3,6 +3,9 @@ package com.example.glimpse.firebase
 import com.google.firebase.database.FirebaseDatabase
 import android.util.Log
 import com.google.firebase.FirebaseApp
+import com.example.glimpse.model.UserLocation
+import com.google.firebase.firestore.auth.User
+import com.google.firebase.database.DataSnapshot
 
 class FirebaseRepository {
     private val database = FirebaseDatabase.getInstance(
@@ -40,6 +43,29 @@ class FirebaseRepository {
             }
             .addOnFailureListener { error ->
                 Log.e("FIREBASE", "WRITE FAILED", error)
+            }
+    }
+
+    fun getUsersLocations(
+        onResult: (List<UserLocation>) -> Unit
+    ) {
+        usersRef.get()
+            .addOnSuccessListener { snapshot ->
+
+                val locations = snapshot.children.mapNotNull { child ->
+
+                    val location =
+                        child.getValue(UserLocation::class.java)
+
+                    location?.copy(
+                        uid = child.key ?: ""
+                    )
+                }
+
+                onResult(locations)
+            }
+            .addOnFailureListener { error ->
+                Log.e("FIREBASE", "Failed to fetch locations", error)
             }
     }
 }
