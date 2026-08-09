@@ -32,6 +32,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import org.maplibre.compose.camera.CameraState
 import org.maplibre.spatialk.geojson.Position
 import com.google.firebase.auth.FirebaseAuth
+import org.maplibre.compose.sources.GeoJsonData
+import org.maplibre.compose.sources.GeoJsonOptions
+import org.maplibre.compose.sources.rememberGeoJsonSource
+import org.maplibre.spatialk.geojson.Feature
+import org.maplibre.spatialk.geojson.FeatureCollection
+import org.maplibre.spatialk.geojson.Point
+import com.example.glimpse.model.UserLocation
+import org.maplibre.compose.expressions.dsl.feature
 
 @Composable
 fun HomeScreen(
@@ -52,11 +60,16 @@ fun HomeScreen(
     }
     val firebaseRepository = remember {
         FirebaseRepository()
-
+    }
+    var userLocations by remember{
+        mutableStateOf(emptyList<UserLocation>())
     }
     LaunchedEffect(Unit) {
         firebaseRepository.getUsersLocations { locations ->
-            locations.forEach { user ->
+            userLocations=locations
+
+            locations.forEach{
+                user->
                 Log.d(
                     "FIREBASE_USERS",
                     "UID: ${user.uid}, Lat: ${user.latitude}, Lng: ${user.longitude}"
@@ -157,7 +170,31 @@ fun HomeScreen(
                     "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
                 ),
                 cameraState=cameraState
-            )
+            ){
+                MaplibreMap(
+                    modifier = Modifier.fillMaxSize(),
+                    baseStyle = BaseStyle.Uri(
+                        "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+                    ),
+                    cameraState = cameraState
+                ) {
+                    val featureCollection = FeatureCollection(
+                        userLocations.map { user ->
+                            Feature(
+                                geometry = Point(
+                                    longitude = user.longitude,
+                                    latitude = user.latitude
+                                ),
+                                properties = null
+                            )
+                        }
+                    )
+
+                    val geoSource = rememberGeoJsonSource(
+                        data = GeoJsonData.Features(featureCollection)
+                    )
+                }
+            }
 
             TopControls(
                 modifier = Modifier
