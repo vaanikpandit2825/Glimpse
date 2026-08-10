@@ -171,13 +171,7 @@ fun HomeScreen(
                 ),
                 cameraState=cameraState
             ){
-                MaplibreMap(
-                    modifier = Modifier.fillMaxSize(),
-                    baseStyle = BaseStyle.Uri(
-                        "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
-                    ),
-                    cameraState = cameraState
-                ) {
+
                     val featureCollection = FeatureCollection(
                         userLocations.map { user ->
                             Feature(
@@ -194,7 +188,7 @@ fun HomeScreen(
                         data = GeoJsonData.Features(featureCollection)
                     )
                 }
-            }
+
 
             TopControls(
                 modifier = Modifier

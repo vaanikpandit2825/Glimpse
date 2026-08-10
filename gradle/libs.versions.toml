@@ -1,6 +1,6 @@
 [versions]
 agp = "9.2.1"
-kotlin = "2.0.21"
+kotlin = "2.3.21"
 
 coreKtx = "1.17.0"
 lifecycleRuntimeKtx = "2.10.0"
@@ -52,9 +52,9 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
-maplibre-compose = { module = "org.maplibre.compose:maplibre-compose", version = "0.13.0" }
+maplibre-compose = { module = "org.maplibre.compose:maplibre-compose-android", version = "0.13.1" }
 
-maplibre-android-opengl = { module = "org.maplibre.gl:android-sdk-opengl", version = "13.0.2" }
+
 
 [plugins]
 
