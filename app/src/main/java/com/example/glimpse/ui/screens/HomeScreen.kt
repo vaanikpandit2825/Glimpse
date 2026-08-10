@@ -40,6 +40,9 @@ import org.maplibre.spatialk.geojson.FeatureCollection
 import org.maplibre.spatialk.geojson.Point
 import com.example.glimpse.model.UserLocation
 import org.maplibre.compose.expressions.dsl.feature
+import org.maplibre.compose.layers.CircleLayer
+import androidx.compose.ui.graphics.Color
+import org.maplibre.compose.expressions.dsl.const
 
 @Composable
 fun HomeScreen(
@@ -187,6 +190,14 @@ fun HomeScreen(
                     val geoSource = rememberGeoJsonSource(
                         data = GeoJsonData.Features(featureCollection)
                     )
+                CircleLayer(
+                    id = "user-locations",
+                    source = geoSource,
+                    color = const(Color.Red),
+                    strokeColor = const(Color.White),
+                    radius = const(8.dp),
+                    strokeWidth = const(2.dp)
+                )
                 }
 
 
