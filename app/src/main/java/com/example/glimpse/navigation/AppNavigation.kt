@@ -8,6 +8,7 @@ import com.example.glimpse.auth.SignupScreen
 import com.example.glimpse.auth.LoginScreen
 import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
+import com.example.glimpse.ui.screens.ProfileScreen
 
 @Composable
 fun AppNavigation(){
@@ -22,7 +23,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "signup"
     )
     {
         composable("signup"){
@@ -33,6 +34,9 @@ fun AppNavigation(){
         }
         composable("home"){
             HomeScreen(navController)
+        }
+        composable("profile"){
+            ProfileScreen(navController)
         }
     }
 }
