@@ -30,7 +30,8 @@ fun TopControls(
     modifier: Modifier = Modifier,
     onSettingsClick: () -> Unit = {},
     onFriendsClick: () -> Unit = {},
-    onChatClick: () -> Unit = {}
+    onChatClick: () -> Unit = {},
+
 ) {
     Surface(
         modifier = modifier
