@@ -64,7 +64,7 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
-
+    implementation("com.cloudinary:cloudinary-android:3.1.2")
     implementation(libs.maplibre.compose)
 
 
