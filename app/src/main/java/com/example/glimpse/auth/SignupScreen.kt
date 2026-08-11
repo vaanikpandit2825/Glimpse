@@ -53,6 +53,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.R
 import com.example.glimpse.ui.theme.GlimpseFonts
 import androidx.navigation.NavController
+import kotlin.math.sin
 
 private val AccentBlue     = Color(0xFF6EA8FF)
 private val FieldBg        = Color(0xFF1C1C1C)
@@ -78,6 +79,7 @@ fun SignupScreen(
     var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val viewModel: AuthViewModel = viewModel()
+    var name by remember{mutableStateOf("")}
     var errorMessage by remember{mutableStateOf("")}
 
 
@@ -182,6 +184,29 @@ fun SignupScreen(
 
             Spacer(Modifier.height(24.dp))
 
+            FieldLabel("NAME")
+            Spacer(Modifier.height(7.dp))
+
+            OutlinedTextField(
+                value=name,
+                onValueChange = {name=it},
+                placeholder={
+                    Text(
+                        text="Your Name",
+                        color=Color.White.copy(alpha=0.28f),
+                        style= TextStyle(fontSize = 14.sp)
+                    )
+                },
+                singleLine = true,
+                colors=glimpseFieldColors(),
+                shape= RoundedCornerShape(FieldCorner),
+                textStyle= TextStyle(fontSize = 14.sp,color=Color.White),
+                modifier=Modifier.fillMaxWidth()
+                    .height(FieldHeight)
+            )
+
+            Spacer(Modifier.height(18.dp))
+
             FieldLabel("EMAIL")
 
             Spacer(Modifier.height(7.dp))
@@ -247,38 +272,55 @@ fun SignupScreen(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick  = {
-                    if(email.isBlank())
-                        errorMessage = "Please enter the email address"
-                    else if(password.isBlank())
-                        errorMessage = "Please enter the password"
-                    else
-                        errorMessage=""
+                onClick = {
 
-                        viewModel.signUp(
-                            email     = email,
-                            password  = password,
-                            onSuccess = {
-                                navController.navigate("home"){
-                                    popUpTo("signUp"){
-                                        inclusive=true
+                    when {
+                        name.isBlank() -> {
+                            errorMessage = "Please enter your name"
+                        }
+
+                        email.isBlank() -> {
+                            errorMessage = "Please enter the email address"
+                        }
+
+                        password.isBlank() -> {
+                            errorMessage = "Please enter the password"
+                        }
+
+                        else -> {
+                            errorMessage = ""
+
+                            viewModel.signUp(
+                                name = name,
+                                email = email,
+                                password = password,
+                                onSuccess = {
+                                    navController.navigate("home") {
+                                        popUpTo("signup") {
+                                            inclusive = true
+                                        }
+                                    }
+                                },
+                                onFailure = {
+                                    errorMessage = when {
+                                        it.message?.contains("password", true) == true ->
+                                            "Password must be at least 6 characters"
+
+                                        it.message?.contains("already", true) == true ->
+                                            "User with this email already exists"
+
+                                        it.message?.contains("badly formatted", true) == true ->
+                                            "Please enter a valid email address"
+
+                                        else ->
+                                            "Signup failed. Please try again later"
                                     }
                                 }
-                            },
-                            onFailure = {
-                                errorMessage = when{
-                                    it.message?.contains("password",true)==true->
-                                        "Password must be atleast 6 letters"
-                                    it.message?.contains("already",true)==true->
-                                        "User with this mail already exists"
-                                    it.message?.contains("badly formatted",true)==true->
-                                        "Please enter a valid email address"
-                                    else ->
-                                        "SignUp failed Please try again later"
-                                }
-                            }
-                        )
-                    },
+                            )
+                        }
+                    }
+                },
+
                 colors   = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                 shape    = RoundedCornerShape(ButtonCorner),
                 modifier = Modifier
