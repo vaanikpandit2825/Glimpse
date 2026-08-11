@@ -43,6 +43,9 @@ import org.maplibre.compose.expressions.dsl.feature
 import org.maplibre.compose.layers.CircleLayer
 import androidx.compose.ui.graphics.Color
 import org.maplibre.compose.expressions.dsl.const
+import org.maplibre.compose.expressions.dsl.asString
+import org.maplibre.compose.expressions.dsl.case
+import org.maplibre.compose.expressions.dsl.switch
 
 @Composable
 fun HomeScreen(
@@ -152,11 +155,18 @@ fun HomeScreen(
                                 firebaseRepository.updateLocation(
                                     uid = uid,
                                     latitude = location.latitude,
-                                    longitude = location.longitude
+                                    longitude = location.longitude,
+                                    onSuccess = {
+                                        firebaseRepository.getUsersLocations { locations ->
+                                            userLocations = locations
+
+                                            Log.d(
+                                                "FIREBASE_USERS",
+                                                "Updated locations: ${locations.size}"
+                                            )
+                                        }
+                                    }
                                 )
-
-                                Log.d("FIREBASE", "Location Uploaded")
-
                             } else {
 
                                 Log.d("FIREBASE", "Location is null")
@@ -183,7 +193,7 @@ fun HomeScreen(
                                     latitude = user.latitude
                                 ),
                                 properties = null
-                            )
+                                    )
                         }
                     )
 
@@ -199,12 +209,13 @@ fun HomeScreen(
                     strokeWidth = const(2.dp)
                 )
                 }
-
-
             TopControls(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 20.dp, start = 20.dp, end = 20.dp)
+                    .padding(top = 20.dp, start = 20.dp, end = 20.dp),
+                        onSettingsClick={
+                    navController.navigate("profile")
+                }
             )
 
             MyLocationButton(
