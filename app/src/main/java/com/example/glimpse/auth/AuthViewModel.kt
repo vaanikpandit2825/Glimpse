@@ -7,12 +7,14 @@ class AuthViewModel : ViewModel(){
     private val repository= AuthRepository()
 
     fun signUp(
+        name: String,
         email:String,
         password:String,
         onSuccess:()->Unit,
         onFailure:(Exception)->Unit
     ){
         repository.signUp(
+            name,
             email,
             password,
             onSuccess,
