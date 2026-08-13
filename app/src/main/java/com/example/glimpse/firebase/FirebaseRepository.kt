@@ -2,6 +2,7 @@ package com.example.glimpse.firebase
 
 import android.util.Log
 import com.example.glimpse.model.UserLocation
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 
 class FirebaseRepository {
@@ -81,6 +82,35 @@ class FirebaseRepository {
                     "Failed to fetch locations",
                     error
                 )
+            }
+    }
+
+    fun getCurrentUserProfile(
+        onResult: (name: String, profilePhotoUrl: String) -> Unit,
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (uid == null) {
+            onFailure(Exception("User is not logged in"))
+            return
+        }
+
+        database.getReference("profiles")
+            .child(uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val name = snapshot.child("name")
+                    .getValue(String::class.java) ?: ""
+
+                val profilePhotoUrl = snapshot.child("profilePhotoUrl")
+                    .getValue(String::class.java) ?: ""
+
+                onResult(name, profilePhotoUrl)
+            }
+            .addOnFailureListener { error ->
+                onFailure(error)
             }
     }
 }
