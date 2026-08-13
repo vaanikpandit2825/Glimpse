@@ -56,6 +56,9 @@ class CloudinaryRepository {
                     requestId: String,
                     error: ErrorInfo
                 ) {
+                    onFailure(
+                        error.description ?: "Upload rescheduled"
+                    )
                 }
             })
             .dispatch()
