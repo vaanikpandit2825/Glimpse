@@ -12,6 +12,7 @@ class FirebaseRepository {
     )
 
     private val locationsRef = database.getReference("locations")
+    private val profilesRef = database.getReference("profiles")
 
     fun updateLocation(
         uid: String,
@@ -82,6 +83,30 @@ class FirebaseRepository {
                     "Failed to fetch locations",
                     error
                 )
+            }
+    }
+
+    fun updateProfilePhoto(
+        uid: String,
+        photoUrl: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        profilesRef
+            .child(uid)
+            .child("profilePhotoUrl")
+            .setValue(photoUrl)
+            .addOnSuccessListener {
+                Log.d("FIREBASE", "PROFILE PHOTO URL SAVED")
+                onSuccess()
+            }
+            .addOnFailureListener { error ->
+                Log.e(
+                    "FIREBASE",
+                    "FAILED TO SAVE PROFILE PHOTO URL",
+                    error
+                )
+                onFailure(error)
             }
     }
 
