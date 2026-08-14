@@ -19,10 +19,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import com.example.glimpse.firebase.FirebaseRepository
 import androidx.navigation.NavController
 import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Button
+import com.example.glimpse.cloudinary.CloudinaryRepository
 
 @Composable
 fun ProfileScreen(
@@ -32,6 +38,72 @@ fun ProfileScreen(
     var userName by remember { mutableStateOf("") }
     var profilePhotoUrl by remember { mutableStateOf("") }
     val firebaseRepository = remember { FirebaseRepository() }
+    val cloudinaryRepository = remember{ CloudinaryRepository() }
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    var selectedImageUri by remember{ mutableStateOf<Uri?>(null) }
+    val photoPickerLauncher =rememberLauncherForActivityResult(
+        contract  = ActivityResultContracts.PickVisualMedia()
+    ) {
+         uri->
+        selectedImageUri=uri
+
+        if (uri != null) {
+
+            cloudinaryRepository.uploadProfilePhoto(
+                imageUri = uri,
+
+                onSuccess = { secureUrl ->
+
+                    Log.d(
+                        "CLOUDINARY",
+                        "Upload successful: $secureUrl"
+                    )
+
+                    val uid = currentUser?.uid
+
+                    if (uid != null) {
+
+                        firebaseRepository.updateProfilePhoto(
+                            uid = uid,
+                            photoUrl = secureUrl,
+
+                            onSuccess = {
+                                Log.d(
+                                    "PROFILE",
+                                    "Profile photo URL saved to Firebase"
+                                )
+
+                                profilePhotoUrl = secureUrl
+                            },
+
+                            onFailure = { error ->
+                                Log.e(
+                                    "PROFILE",
+                                    "Failed to save profile photo URL",
+                                    error
+                                )
+                            }
+                        )
+
+                    } else {
+
+                        Log.e(
+                            "PROFILE",
+                            "Current user UID is null"
+                        )
+                    }
+                },
+
+                onFailure = { error ->
+
+                    Log.e(
+                        "CLOUDINARY",
+                        "Image upload failed: $error"
+                    )
+                }
+            )
+        }
+    }
 
     LaunchedEffect(Unit) {
         firebaseRepository.getCurrentUserProfile(
@@ -53,6 +125,7 @@ fun ProfileScreen(
             }
         )
     }
+
 
     Box(
         modifier=Modifier
@@ -117,6 +190,19 @@ fun ProfileScreen(
                     fontSize = 13.sp,
                     color = Color(0xFF4CAF50)
                 )
+
+                Spacer(modifier=Modifier.height(3.dp))
+                Button(
+                    onClick = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    }
+                ) {
+                    Text("Choose profile photo")
+                }
             }
         }
     }
