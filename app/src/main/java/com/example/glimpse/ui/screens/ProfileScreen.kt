@@ -253,7 +253,9 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedButton(
-                    onClick = { },
+                    onClick = {
+                        navController.navigate("editProfile")
+                    },
                     shape = RoundedCornerShape(12.dp)
                 ) {
 
