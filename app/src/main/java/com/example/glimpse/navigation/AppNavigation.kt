@@ -6,9 +6,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.glimpse.auth.SignupScreen
 import com.example.glimpse.auth.LoginScreen
+import com.example.glimpse.ui.screens.EditProfileScreen
 import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.ProfileScreen
+import androidx.compose.material3.OutlinedTextField
 
 @Composable
 fun AppNavigation(){
@@ -23,7 +25,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "signup"
+        startDestination = "profile"
     )
     {
         composable("signup"){
@@ -37,6 +39,11 @@ fun AppNavigation(){
         }
         composable("profile"){
             ProfileScreen(navController)
+        }
+        composable("editProfile"){
+            EditProfileScreen(
+                navController=navController
+            )
         }
     }
 }
