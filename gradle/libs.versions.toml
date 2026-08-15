@@ -16,6 +16,8 @@ espressoCore = "3.7.0"
 googleServices = "4.4.3"
 firebaseBom = "34.1.0"
 
+coil = "2.7.0"
+
 [libraries]
 
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,6 +55,8 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
 maplibre-compose = { module = "org.maplibre.compose:maplibre-compose-android", version = "0.13.1" }
+
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 
 
