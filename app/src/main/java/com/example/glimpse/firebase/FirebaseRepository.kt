@@ -138,4 +138,21 @@ class FirebaseRepository {
                 onFailure(error)
             }
     }
+    fun updateProfileName(
+        uid: String,
+        name: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        profilesRef
+            .child(uid)
+            .child("name")
+            .setValue(name)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
 }
