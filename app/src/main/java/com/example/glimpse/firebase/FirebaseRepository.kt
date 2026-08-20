@@ -3,6 +3,10 @@ package com.example.glimpse.firebase
 import android.util.Log
 import com.example.glimpse.model.UserLocation
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
 import com.google.firebase.database.FirebaseDatabase
 
 class FirebaseRepository {
@@ -13,6 +17,7 @@ class FirebaseRepository {
 
     private val locationsRef = database.getReference("locations")
     private val profilesRef = database.getReference("profiles")
+    private val glimpseIdsRef = database.getReference("glimpseIds")
 
     fun updateLocation(
         uid: String,
@@ -155,4 +160,129 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
+
+    private fun generateGlimpseId(): String {
+        val characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+        return buildString {
+            repeat(8) {
+                append(characters.random())
+            }
+        }
+    }
+
+    fun ensureGlimpseId(
+        uid: String,
+        onSuccess: (String) -> Unit,
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        profilesRef
+            .child(uid)
+            .child("glimpseId")
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val existingId =
+                    snapshot.getValue(String::class.java)
+
+                if (!existingId.isNullOrEmpty()) {
+                    onSuccess(existingId)
+                    return@addOnSuccessListener
+                }
+
+                reserveGlimpseId(
+                    uid = uid,
+                    onSuccess = onSuccess,
+                    onFailure = onFailure
+                )
+            }
+            .addOnFailureListener { error ->
+                onFailure(error)
+            }
+    }
+
+    private fun reserveGlimpseId(
+        uid: String,
+        onSuccess: (String) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val glimpseId = generateGlimpseId()
+
+        glimpseIdsRef
+            .child(glimpseId)
+            .runTransaction(object : Transaction.Handler {
+
+                override fun doTransaction(
+                    currentData: MutableData
+                ): Transaction.Result {
+
+                    if (currentData.value != null) {
+                        return Transaction.abort()
+                    }
+
+                    currentData.value = uid
+
+                    return Transaction.success(currentData)
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (error != null) {
+                        onFailure(error.toException())
+                        return
+                    }
+
+                    if (!committed) {
+                        reserveGlimpseId(
+                            uid = uid,
+                            onSuccess = onSuccess,
+                            onFailure = onFailure
+                        )
+                        return
+                    }
+
+                    profilesRef
+                        .child(uid)
+                        .child("glimpseId")
+                        .setValue(glimpseId)
+                        .addOnSuccessListener {
+                            onSuccess(glimpseId)
+                        }
+                        .addOnFailureListener { saveError ->
+                            onFailure(saveError)
+                        }
+                }
+            })
+    }
+
+    fun getCurrentUserGlimpseId(
+        onResult: (String) -> Unit,
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (uid == null) {
+            onFailure(Exception("User is not logged in"))
+            return
+        }
+
+        profilesRef
+            .child(uid)
+            .child("glimpseId")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val glimpseId =
+                    snapshot.getValue(String::class.java) ?: ""
+
+                onResult(glimpseId)
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+
 }
