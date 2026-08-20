@@ -11,6 +11,7 @@ import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.ProfileScreen
 import androidx.compose.material3.OutlinedTextField
+import com.example.glimpse.ui.screens.GlimpseCodeScreen
 
 @Composable
 fun AppNavigation(){
@@ -25,7 +26,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "profile"
+        startDestination = "signup"
     )
     {
         composable("signup"){
@@ -42,6 +43,11 @@ fun AppNavigation(){
         }
         composable("editProfile"){
             EditProfileScreen(
+                navController=navController
+            )
+        }
+        composable ("glimpseCode" ){
+            GlimpseCodeScreen(
                 navController=navController
             )
         }
