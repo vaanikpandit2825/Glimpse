@@ -2,6 +2,7 @@ package com.example.glimpse.auth
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.example.glimpse.firebase.FirebaseRepository
 
 class AuthRepository {
 
@@ -10,6 +11,8 @@ class AuthRepository {
     private val database = FirebaseDatabase.getInstance(
         "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
     )
+
+    private val firebaseRepository=FirebaseRepository()
 
     private val profilesRef = database.getReference("profiles")
 
@@ -40,7 +43,16 @@ class AuthRepository {
                     .child(uid)
                     .setValue(profile)
                     .addOnSuccessListener {
-                        onSuccess()
+
+                        firebaseRepository.ensureGlimpseId(
+                            uid = uid,
+                            onSuccess = {
+                                onSuccess()
+                            },
+                            onFailure = {
+                                onFailure(it)
+                            }
+                        )
                     }
                     .addOnFailureListener {
                         onFailure(it)
