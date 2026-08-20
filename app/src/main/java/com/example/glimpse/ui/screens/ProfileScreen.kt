@@ -265,6 +265,19 @@ fun ProfileScreen(
                     )
                 }
 
+                Spacer(modifier=Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick={
+                        navController.navigate("glimpseCode")
+                    },
+                    shape= RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text="Your Glimpse Code",
+                        color=OceanBlue
+                    )
+                }
                 Spacer(modifier = Modifier.height(28.dp))
 
                 Column(
