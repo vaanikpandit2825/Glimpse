@@ -11,7 +11,9 @@ import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.ProfileScreen
 import androidx.compose.material3.OutlinedTextField
+import com.example.glimpse.ui.screens.AddPersonScreen
 import com.example.glimpse.ui.screens.GlimpseCodeScreen
+
 
 @Composable
 fun AppNavigation(){
@@ -26,7 +28,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "signup"
+        startDestination = "addperson"
     )
     {
         composable("signup"){
@@ -48,6 +50,11 @@ fun AppNavigation(){
         }
         composable ("glimpseCode" ){
             GlimpseCodeScreen(
+                navController=navController
+            )
+        }
+        composable("addperson"){
+            AddPersonScreen(
                 navController=navController
             )
         }
