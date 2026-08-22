@@ -285,4 +285,23 @@ class FirebaseRepository {
             }
     }
 
+
+
+    fun findUidByGlimpseId(
+        glimpseId:String,
+        onSuccess: (String?) -> Unit,
+        onFailure: (Exception) -> Unit={}
+    ){
+        glimpseIdsRef
+            .child(glimpseId.uppercase())
+            .get()
+            .addOnSuccessListener { snapshot->
+                val uid = snapshot.getValue(String::class.java)
+                onSuccess(uid)
+            }
+            .addOnFailureListener { error ->
+                onFailure(error)
+            }
+    }
+
 }
