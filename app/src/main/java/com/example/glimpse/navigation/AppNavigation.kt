@@ -13,6 +13,7 @@ import com.example.glimpse.ui.screens.ProfileScreen
 import androidx.compose.material3.OutlinedTextField
 import com.example.glimpse.ui.screens.AddPersonScreen
 import com.example.glimpse.ui.screens.GlimpseCodeScreen
+import com.example.glimpse.ui.screens.ConnectionRequestScreen
 
 
 @Composable
@@ -28,7 +29,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "addperson"
+        startDestination = "connectionRequest"
     )
     {
         composable("signup"){
@@ -56,6 +57,13 @@ fun AppNavigation(){
         composable("addperson"){
             AddPersonScreen(
                 navController=navController
+            )
+        }
+        composable("connectionRequest"){
+            ConnectionRequestScreen(
+                navController=navController,
+                name="Vaanik Pandit",
+                profilePhotoUrl=""
             )
         }
     }
