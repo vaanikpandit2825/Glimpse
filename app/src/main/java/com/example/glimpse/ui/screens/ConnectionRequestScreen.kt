@@ -27,21 +27,46 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.glimpse.connection.ConnectionRequestViewModel
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import  androidx.compose.runtime.setValue
+import  androidx.compose.runtime.LaunchedEffect
 @Composable
 fun ConnectionRequestScreen(
     navController: NavController,
-    name: String,
-    profilePhotoUrl: String
+    receiverUid: String
 ) {
-    val background = Color(0xFFFCF9F8)
+    val background = MaterialTheme.colorScheme.background
     val surface = Color.White
-    val textColor = Color(0xFF1C1B1B)
-    val secondary = Color(0xFF595F65)
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
     val primary = Color(0xFF005E97)
     val primaryContainer = Color(0xFF0077BE)
     val primaryFixed = Color(0xFFCFE5FF)
-    val outline = Color(0xFFC0C7D2)
+    val outline = MaterialTheme.colorScheme.outline
+
+    val viewModel: ConnectionRequestViewModel=viewModel()
+
+    var name by remember{ mutableStateOf("") }
+    var profilePhotoUrl by remember{mutableStateOf("")}
+
+    LaunchedEffect(receiverUid) {
+        viewModel.getUserProfile(
+            uid = receiverUid,
+            onResult = { userName, photoUrl ->
+                name = userName
+                profilePhotoUrl = photoUrl
+            },
+            onFailure = {
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -267,7 +292,17 @@ fun ConnectionRequestScreen(
         ) {
 
             Button(
-                onClick = {},
+                onClick = {
+                    viewModel.sendConnectionRequest(
+                        receiverUid=receiverUid,
+                        onSuccess = {
+                            navController.popBackStack()
+                        },
+                        onFailure = {
+
+                        }
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -340,7 +375,7 @@ private fun ConnectionStep(
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF1C1B1B)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(
@@ -351,7 +386,7 @@ private fun ConnectionStep(
                 text = description,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
-                color = Color(0xFF595F65)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
