@@ -14,7 +14,7 @@ import androidx.compose.material3.OutlinedTextField
 import com.example.glimpse.ui.screens.AddPersonScreen
 import com.example.glimpse.ui.screens.GlimpseCodeScreen
 import com.example.glimpse.ui.screens.ConnectionRequestScreen
-
+import okhttp3.Connection
 
 @Composable
 fun AppNavigation(){
@@ -29,7 +29,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "connectionRequest"
+        startDestination = "connectionRequest/ACTUAL_UID"
     )
     {
         composable("signup"){
@@ -59,12 +59,19 @@ fun AppNavigation(){
                 navController=navController
             )
         }
-        composable("connectionRequest"){
-            ConnectionRequestScreen(
-                navController=navController,
-                name="Vaanik Pandit",
-                profilePhotoUrl=""
-            )
+        composable(
+            route = "connectionRequest/{receiverUid}"
+        ) { backStackEntry ->
+
+            val receiverUid =
+                backStackEntry.arguments?.getString("receiverUid")
+
+            if (receiverUid != null) {
+                ConnectionRequestScreen(
+                    navController = navController,
+                    receiverUid = receiverUid,
+                )
+            }
         }
     }
 }
