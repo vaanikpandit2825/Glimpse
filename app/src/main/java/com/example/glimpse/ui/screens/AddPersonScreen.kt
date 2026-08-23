@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.glimpse.ui.theme.OceanBlue
+import androidx.compose.material3.MaterialTheme
+import com.example.glimpse.firebase.FirebaseRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,12 +47,13 @@ fun AddPersonScreen(
     var glimpseCode by remember {
         mutableStateOf("")
     }
+    val firebaseRepository =  remember { FirebaseRepository() }
 
-    val background = Color(0xFFFCF9F8)
-    val surface = Color.White
-    val textColor = Color(0xFF1C1B1B)
-    val secondary = Color(0xFF595F65)
-    val outlineVariant = Color(0xFFC0C7D2)
+    val background = MaterialTheme.colorScheme.background
+    val surface = MaterialTheme.colorScheme.surface
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val outlineVariant = MaterialTheme.colorScheme.outline
     val qrBackground = Color(0xFFE8EEF5)
     val primaryContainer = Color(0xFF0077BE)
 
@@ -550,6 +553,23 @@ fun AddPersonScreen(
 
                 Button(
                     onClick = {
+                        firebaseRepository.findUidByGlimpseId(
+                            glimpseId=glimpseCode,
+                            onSuccess = {
+                                receiverUid ->
+                                if(receiverUid==null){
+                                    return@findUidByGlimpseId
+                                }
+                                showCodeSheet=false
+
+                                navController.navigate(
+                                    "connectionRequest/\$receiverUid"
+                                )
+                            },
+                            onFailure = {
+
+                            }
+                        )
                     },
                     modifier = Modifier
                         .fillMaxWidth()
