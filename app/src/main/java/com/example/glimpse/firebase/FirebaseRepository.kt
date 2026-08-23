@@ -19,6 +19,8 @@ class FirebaseRepository {
     private val profilesRef = database.getReference("profiles")
     private val glimpseIdsRef = database.getReference("glimpseIds")
 
+    private val connectionRequestsRef=database.getReference("connectionRequests")
+
     fun updateLocation(
         uid: String,
         latitude: Double,
@@ -285,8 +287,6 @@ class FirebaseRepository {
             }
     }
 
-
-
     fun findUidByGlimpseId(
         glimpseId:String,
         onSuccess: (String?) -> Unit,
@@ -304,4 +304,78 @@ class FirebaseRepository {
             }
     }
 
+    fun sendConnectionRequest(
+        senderUid: String,
+        receiverUid: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        if (senderUid == receiverUid) {
+            onFailure(Exception("You cannot connect with yourself"))
+            return
+        }
+
+        val requestRef = connectionRequestsRef
+            .child(receiverUid)
+            .child(senderUid)
+
+        requestRef.get()
+            .addOnSuccessListener { snapshot ->
+
+                if (snapshot.exists()) {
+                    val status = snapshot
+                        .child("status")
+                        .getValue(String::class.java)
+
+                    if (status == "pending") {
+                        onFailure(
+                            Exception("Connection request already sent")
+                        )
+                        return@addOnSuccessListener
+                    }
+                }
+
+                val request = hashMapOf(
+                    "status" to "pending",
+                    "createdAt" to System.currentTimeMillis()
+                )
+
+                requestRef
+                    .setValue(request)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener {
+                        onFailure(it)
+                    }
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+
+    fun getUserProfile(
+        uid: String,
+        onResult: (name: String, profilePhotoUrl: String) -> Unit,
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        profilesRef
+            .child(uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val name = snapshot
+                    .child("name")
+                    .getValue(String::class.java) ?: ""
+
+                val profilePhotoUrl = snapshot
+                    .child("profilePhotoUrl")
+                    .getValue(String::class.java) ?: ""
+
+                onResult(name, profilePhotoUrl)
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
 }
