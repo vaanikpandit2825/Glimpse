@@ -14,8 +14,14 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,18 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.compose.rememberNavController
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.connection.ConnectionRequestViewModel
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import  androidx.compose.runtime.setValue
-import  androidx.compose.runtime.LaunchedEffect
+
 @Composable
 fun ConnectionRequestScreen(
     navController: NavController,
@@ -48,13 +47,14 @@ fun ConnectionRequestScreen(
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
     val primary = Color(0xFF005E97)
     val primaryContainer = Color(0xFF0077BE)
-    val primaryFixed = Color(0xFFCFE5FF)
     val outline = MaterialTheme.colorScheme.outline
 
-    val viewModel: ConnectionRequestViewModel=viewModel()
+    val viewModel: ConnectionRequestViewModel = viewModel()
 
-    var name by remember{ mutableStateOf("") }
-    var profilePhotoUrl by remember{mutableStateOf("")}
+    var name by remember { mutableStateOf("") }
+    var profilePhotoUrl by remember { mutableStateOf("") }
+    var requestSent by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(receiverUid) {
         viewModel.getUserProfile(
@@ -64,6 +64,7 @@ fun ConnectionRequestScreen(
                 profilePhotoUrl = photoUrl
             },
             onFailure = {
+                errorMessage = it.message ?: "Failed to load profile"
             }
         )
     }
@@ -73,7 +74,6 @@ fun ConnectionRequestScreen(
             .fillMaxSize()
             .background(background)
     ) {
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -125,7 +125,6 @@ fun ConnectionRequestScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -134,7 +133,6 @@ fun ConnectionRequestScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
                 if (profilePhotoUrl.isNotEmpty()) {
                     AsyncImage(
                         model = profilePhotoUrl,
@@ -183,7 +181,6 @@ fun ConnectionRequestScreen(
                     .background(surface)
                     .padding(24.dp)
             ) {
-
                 Text(
                     text = "You're about to connect",
                     fontSize = 20.sp,
@@ -290,16 +287,16 @@ fun ConnectionRequestScreen(
                 ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Button(
                 onClick = {
                     viewModel.sendConnectionRequest(
-                        receiverUid=receiverUid,
+                        receiverUid = receiverUid,
                         onSuccess = {
-                            navController.popBackStack()
+                            requestSent = true
+                            errorMessage = ""
                         },
-                        onFailure = {
-
+                        onFailure = { error ->
+                            errorMessage = error.message ?: "Failed to send request"
                         }
                     )
                 },
@@ -323,6 +320,22 @@ fun ConnectionRequestScreen(
                     fontSize = 14.sp,
                     lineHeight = 16.sp,
                     fontWeight = FontWeight.Medium
+                )
+            }
+
+            if (requestSent) {
+                Text(
+                    text = "Connection request sent",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 14.sp
+                )
+            }
+
+            if (errorMessage.isNotEmpty()) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp
                 )
             }
 
@@ -350,7 +363,6 @@ private fun ConnectionStep(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
-
         Box(
             modifier = Modifier
                 .size(32.dp)
