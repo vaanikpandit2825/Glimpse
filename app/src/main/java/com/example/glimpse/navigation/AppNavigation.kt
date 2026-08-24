@@ -29,7 +29,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "connectionRequest/ACTUAL_UID"
+        startDestination = "profile"
     )
     {
         composable("signup"){
