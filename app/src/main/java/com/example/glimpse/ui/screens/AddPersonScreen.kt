@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import com.example.glimpse.ui.theme.OceanBlue
 import androidx.compose.material3.MaterialTheme
 import com.example.glimpse.firebase.FirebaseRepository
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -555,15 +556,18 @@ fun AddPersonScreen(
                     onClick = {
                         firebaseRepository.findUidByGlimpseId(
                             glimpseId=glimpseCode,
-                            onSuccess = {
-                                receiverUid ->
-                                if(receiverUid==null){
+                            onSuccess = { receiverUid ->
+
+                                Log.d("GLIMPSE_UID", "receiverUid = $receiverUid")
+
+                                if (receiverUid == null) {
                                     return@findUidByGlimpseId
                                 }
-                                showCodeSheet=false
+
+                                showCodeSheet = false
 
                                 navController.navigate(
-                                    "connectionRequest/\$receiverUid"
+                                    "connectionRequest/$receiverUid"
                                 )
                             },
                             onFailure = {
