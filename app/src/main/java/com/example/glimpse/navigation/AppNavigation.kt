@@ -15,6 +15,7 @@ import com.example.glimpse.ui.screens.AddPersonScreen
 import com.example.glimpse.ui.screens.GlimpseCodeScreen
 import com.example.glimpse.ui.screens.ConnectionRequestScreen
 import okhttp3.Connection
+import com.example.glimpse.ui.screens.ConnectionsRequestScreen
 
 @Composable
 fun AppNavigation(){
@@ -29,7 +30,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "profile"
+        startDestination = "connectionRequests"
     )
     {
         composable("signup"){
@@ -72,6 +73,11 @@ fun AppNavigation(){
                     receiverUid = receiverUid,
                 )
             }
+        }
+        composable("connectionRequests"){
+            ConnectionsRequestScreen(
+                navController=navController
+            )
         }
     }
 }
