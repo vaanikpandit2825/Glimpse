@@ -8,6 +8,9 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.MutableData
 import com.google.firebase.database.Transaction
 import com.google.firebase.database.FirebaseDatabase
+import com.example.glimpse.model.ConnectionRequest
+import com.example.glimpse.model.SharingPermissions
+
 
 class FirebaseRepository {
 
@@ -373,6 +376,169 @@ class FirebaseRepository {
                     .getValue(String::class.java) ?: ""
 
                 onResult(name, profilePhotoUrl)
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+
+    fun getIncomingConnectionRequests(
+        receiverUid: String,
+        onResult: (List<ConnectionRequest>) -> Unit,
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        connectionRequestsRef
+            .child(receiverUid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val requests = snapshot.children.mapNotNull { requestSnapshot ->
+
+                    val senderUid = requestSnapshot.key ?: return@mapNotNull null
+
+                    val status = requestSnapshot
+                        .child("status")
+                        .getValue(String::class.java) ?: ""
+
+                    if (status != "pending") {
+                        return@mapNotNull null
+                    }
+
+                    val createdAt = requestSnapshot
+                        .child("createdAt")
+                        .getValue(Long::class.java) ?: 0L
+
+                    ConnectionRequest(
+                        senderUid = senderUid,
+                        status = status,
+                        createdAt = createdAt
+                    )
+                }
+
+                if (requests.isEmpty()) {
+                    onResult(emptyList())
+                    return@addOnSuccessListener
+                }
+
+                val enrichedRequests = mutableListOf<ConnectionRequest>()
+                var completed = 0
+
+                requests.forEach { request ->
+
+                    getUserProfile(
+                        uid = request.senderUid,
+                        onResult = { name, profilePhotoUrl ->
+
+                            enrichedRequests.add(
+                                request.copy(
+                                    name = name,
+                                    profilePhotoUrl = profilePhotoUrl
+                                )
+                            )
+
+                            completed++
+
+                            if (completed == requests.size) {
+                                onResult(
+                                    enrichedRequests.sortedByDescending {
+                                        it.createdAt
+                                    }
+                                )
+                            }
+                        },
+                        onFailure = {
+                            enrichedRequests.add(request)
+
+                            completed++
+
+                            if (completed == requests.size) {
+                                onResult(
+                                    enrichedRequests.sortedByDescending {
+                                        it.createdAt
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+
+    fun declineConnectionRequest(
+        receiverUid: String,
+        senderUid: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ){
+        connectionRequestsRef
+            .child(receiverUid)
+            .child(senderUid)
+            .removeValue()
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+    fun acceptConnectionRequest(
+        receiverUid: String,
+        senderUid: String,
+        sharingPermissions: SharingPermissions,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ){
+        val requestRef = connectionRequestsRef
+            .child(receiverUid)
+            .child(senderUid)
+
+        val receiverConnectionRef = database
+            .getReference("connections")
+            .child(receiverUid)
+            .child(senderUid)
+
+        val senderConnectionRef = database
+            .getReference("connections")
+            .child(senderUid)
+            .child(receiverUid)
+
+        val receiverSharing = mapOf<String,Any>(
+            "location" to sharingPermissions.location,
+            "profile" to sharingPermissions.profile,
+            "locationHistory" to sharingPermissions.locationHistory
+        )
+
+        val senderSharing = mapOf(
+            "location" to false,
+            "profile" to false,
+            "locationHistory" to false
+        )
+
+        val receiverConnection = mapOf(
+            "status" to "connected",
+            "connectedAt" to System.currentTimeMillis(),
+            "sharing" to receiverSharing
+        )
+
+        val senderConnection = mapOf(
+            "status" to "connected",
+            "connectedAt" to System.currentTimeMillis(),
+            "sharing" to senderSharing
+        )
+
+        val updates = hashMapOf<String, Any?>(
+            "connections/$receiverUid/$senderUid" to receiverConnection,
+            "connections/$senderUid/$receiverUid" to senderConnection,
+            "connectionRequests/$receiverUid/$senderUid" to null
+        )
+
+        database.reference
+            .updateChildren(updates)
+            .addOnSuccessListener {
+                onSuccess()
             }
             .addOnFailureListener {
                 onFailure(it)
