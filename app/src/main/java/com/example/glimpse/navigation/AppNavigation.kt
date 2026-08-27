@@ -11,11 +11,13 @@ import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.ProfileScreen
 import androidx.compose.material3.OutlinedTextField
+import com.example.glimpse.model.SharingPermissions
 import com.example.glimpse.ui.screens.AddPersonScreen
 import com.example.glimpse.ui.screens.GlimpseCodeScreen
 import com.example.glimpse.ui.screens.ConnectionRequestScreen
 import okhttp3.Connection
 import com.example.glimpse.ui.screens.ConnectionsRequestScreen
+import com.example.glimpse.ui.screens.SharingPermissionsScreen
 
 @Composable
 fun AppNavigation(){
@@ -77,6 +79,19 @@ fun AppNavigation(){
         composable("connectionRequests"){
             ConnectionsRequestScreen(
                 navController=navController
+            )
+        }
+
+        composable(
+            route = "sharingPermissions/{senderUid}"
+        ) { backStackEntry ->
+
+            val senderUid =
+                backStackEntry.arguments?.getString("senderUid")
+
+            SharingPermissionsScreen(
+                navController = navController,
+                senderUid = senderUid ?: ""
             )
         }
     }
