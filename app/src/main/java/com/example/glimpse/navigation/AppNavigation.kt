@@ -17,6 +17,7 @@ import com.example.glimpse.ui.screens.GlimpseCodeScreen
 import com.example.glimpse.ui.screens.ConnectionRequestScreen
 import okhttp3.Connection
 import com.example.glimpse.ui.screens.ConnectionsRequestScreen
+import com.example.glimpse.ui.screens.ReviewSharingScreen
 import com.example.glimpse.ui.screens.SharingPermissionsScreen
 
 @Composable
@@ -93,6 +94,19 @@ fun AppNavigation(){
                 navController = navController,
                 senderUid = senderUid ?: ""
             )
+        }
+        composable(
+            route = "reviewSharing/{senderUid}"
+        ) { backStackEntry ->
+            val senderUid =
+                backStackEntry.arguments?.getString("senderUid")
+
+            if (senderUid != null) {
+                ReviewSharingScreen(
+                    navController = navController,
+                    senderUid = senderUid
+                )
+            }
         }
     }
 }
