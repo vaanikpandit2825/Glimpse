@@ -247,15 +247,18 @@ fun SharingPermissionsScreen(
 
         Button(
             onClick = {
-                val permissions = SharingPermissions(
-                    location = location,
-                    profile = profile,
-                    locationHistory = locationHistory
-                )
 
                 navController.currentBackStackEntry
                     ?.savedStateHandle
-                    ?.set("sharingPermissions", permissions)
+                    ?.set("sharing_location", location)
+
+                navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("sharing_profile", profile)
+
+                navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("sharing_location_history", locationHistory)
 
                 navController.navigate(
                     "reviewSharing/$senderUid"
@@ -273,11 +276,7 @@ fun SharingPermissionsScreen(
                 containerColor = primary
             )
         ) {
-            Text(
-                text = "Review Sharing",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
-            )
+
         }
     }
 }
