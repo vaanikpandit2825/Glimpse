@@ -44,12 +44,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.glimpse.connection.ConnectionRequestViewModel
+import com.example.glimpse.model.SharingPermissions
 
 @Composable
 fun ReviewSharingScreen(
     navController: NavController,
     senderUid: String
 ) {
+    var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
     val viewModel: ConnectionRequestViewModel = viewModel()
     val primary = Color(0xFF0077BE)
 
@@ -268,10 +272,45 @@ fun ReviewSharingScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            if (errorMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Text(
+                    text = errorMessage,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp
+                )
+            }
         }
 
         Button(
-            onClick = {},
+            onClick = {
+                isLoading = true
+                errorMessage = ""
+
+                val permissions = SharingPermissions(
+                    location = location,
+                    locationHistory = locationHistory,
+                    profile = profile
+                )
+
+                viewModel.acceptConnectionRequest(
+                    senderUid = senderUid,
+                    permissions = permissions,
+                    onSuccess = {
+                        isLoading = false
+                        errorMessage="Connection succedded"
+                    },
+                    onFailure = { error ->
+                        isLoading = false
+                        errorMessage =
+                            error.message ?: "Something went wrong"
+                    }
+                )
+            },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
@@ -285,7 +324,11 @@ fun ReviewSharingScreen(
             )
         ) {
             Text(
-                text = "Confirm connection",
+                text = if (isLoading) {
+                    "Connecting..."
+                } else {
+                    "Confirm connection"
+                },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -359,7 +402,9 @@ private fun SharingSummaryRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant
+                    )
                     .padding(
                         horizontal = 9.dp,
                         vertical = 5.dp
