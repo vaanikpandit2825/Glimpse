@@ -19,6 +19,7 @@ import okhttp3.Connection
 import com.example.glimpse.ui.screens.ConnectionsRequestScreen
 import com.example.glimpse.ui.screens.ReviewSharingScreen
 import com.example.glimpse.ui.screens.SharingPermissionsScreen
+import com.example.glimpse.ui.screens.SendConnectionPermissionsScreen
 
 @Composable
 fun AppNavigation(){
@@ -105,6 +106,19 @@ fun AppNavigation(){
                 ReviewSharingScreen(
                     navController = navController,
                     senderUid = senderUid
+                )
+            }
+        }
+        composable(
+            route="sendConnectionPermission/{receiverUid}"
+        ){
+            backStackEntry ->
+            val receiverUid=backStackEntry.arguments?.getString("receiverUid")
+
+            if(receiverUid!=null){
+                SendConnectionPermissionsScreen(
+                    navController=navController,
+                    receiverUid=receiverUid
                 )
             }
         }
