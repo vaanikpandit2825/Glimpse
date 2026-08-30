@@ -310,6 +310,7 @@ class FirebaseRepository {
     fun sendConnectionRequest(
         senderUid: String,
         receiverUid: String,
+        sharingPermissions: SharingPermissions,
         onSuccess: () -> Unit = {},
         onFailure: (Exception) -> Unit = {}
     ) {
@@ -324,7 +325,6 @@ class FirebaseRepository {
 
         requestRef.get()
             .addOnSuccessListener { snapshot ->
-
                 if (snapshot.exists()) {
                     val status = snapshot
                         .child("status")
@@ -340,7 +340,12 @@ class FirebaseRepository {
 
                 val request = hashMapOf(
                     "status" to "pending",
-                    "createdAt" to System.currentTimeMillis()
+                    "createdAt" to System.currentTimeMillis(),
+                    "senderSharing" to mapOf(
+                        "location" to sharingPermissions.location,
+                        "profile" to sharingPermissions.profile,
+                        "locationHistory" to sharingPermissions.locationHistory
+                    )
                 )
 
                 requestRef
