@@ -289,15 +289,8 @@ fun ConnectionRequestScreen(
         ) {
             Button(
                 onClick = {
-                    viewModel.sendConnectionRequest(
-                        receiverUid = receiverUid,
-                        onSuccess = {
-                            requestSent = true
-                            errorMessage = ""
-                        },
-                        onFailure = { error ->
-                            errorMessage = error.message ?: "Failed to send request"
-                        }
+                    navController.navigate(
+                        "sendConnectionPermissions/$receiverUid"
                     )
                 },
                 modifier = Modifier
