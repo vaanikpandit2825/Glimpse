@@ -22,13 +22,13 @@ class FirebaseRepository {
     private val profilesRef = database.getReference("profiles")
     private val glimpseIdsRef = database.getReference("glimpseIds")
 
-    private val connectionRequestsRef=database.getReference("connectionRequests")
+    private val connectionRequestsRef = database.getReference("connectionRequests")
 
     fun updateLocation(
         uid: String,
         latitude: Double,
         longitude: Double,
-        onSuccess:()->Unit={}
+        onSuccess: () -> Unit = {}
     ) {
         val location = hashMapOf(
             "latitude" to latitude,
@@ -148,6 +148,7 @@ class FirebaseRepository {
                 onFailure(error)
             }
     }
+
     fun updateProfileName(
         uid: String,
         name: String,
@@ -291,14 +292,14 @@ class FirebaseRepository {
     }
 
     fun findUidByGlimpseId(
-        glimpseId:String,
+        glimpseId: String,
         onSuccess: (String?) -> Unit,
-        onFailure: (Exception) -> Unit={}
-    ){
+        onFailure: (Exception) -> Unit = {}
+    ) {
         glimpseIdsRef
             .child(glimpseId.uppercase())
             .get()
-            .addOnSuccessListener { snapshot->
+            .addOnSuccessListener { snapshot ->
                 val uid = snapshot.getValue(String::class.java)
                 onSuccess(uid)
             }
@@ -477,7 +478,7 @@ class FirebaseRepository {
         senderUid: String,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
-    ){
+    ) {
         connectionRequestsRef
             .child(receiverUid)
             .child(senderUid)
@@ -489,13 +490,14 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
+
     fun acceptConnectionRequest(
         receiverUid: String,
         senderUid: String,
         sharingPermissions: SharingPermissions,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
-    ){
+    ) {
         val requestRef = connectionRequestsRef
             .child(receiverUid)
             .child(senderUid)
@@ -510,43 +512,49 @@ class FirebaseRepository {
             .child(senderUid)
             .child(receiverUid)
 
-        val receiverSharing = mapOf<String,Any>(
+        val receiverSharing = mapOf<String, Any>(
             "location" to sharingPermissions.location,
             "profile" to sharingPermissions.profile,
             "locationHistory" to sharingPermissions.locationHistory
         )
 
-        val senderSharing = mapOf(
-            "location" to false,
-            "profile" to false,
-            "locationHistory" to false
-        )
+        requestRef.get()
+            .addOnSuccessListener { snapshot ->
+                val senderSharing = mapOf(
+                    "location" to (snapshot.child("senderSharing/location")
+                        .getValue(Boolean::class.java) ?: false),
+                    "profile" to (snapshot.child("senderSharing/profile")
+                        .getValue(Boolean::class.java) ?: false),
+                    "locationHistory" to (snapshot.child("senderSharing/locationHistory")
+                        .getValue(Boolean::class.java) ?: false)
+                )
 
-        val receiverConnection = mapOf(
-            "status" to "connected",
-            "connectedAt" to System.currentTimeMillis(),
-            "sharing" to receiverSharing
-        )
+                val receiverConnection = mapOf(
+                    "status" to "connected",
+                    "connectedAt" to System.currentTimeMillis(),
+                    "sharing" to receiverSharing
+                )
 
-        val senderConnection = mapOf(
-            "status" to "connected",
-            "connectedAt" to System.currentTimeMillis(),
-            "sharing" to senderSharing
-        )
+                val senderConnection = mapOf(
+                    "status" to "connected",
+                    "connectedAt" to System.currentTimeMillis(),
+                    "sharing" to senderSharing
+                )
 
-        val updates = hashMapOf<String, Any?>(
-            "connections/$receiverUid/$senderUid" to receiverConnection,
-            "connections/$senderUid/$receiverUid" to senderConnection,
-            "connectionRequests/$receiverUid/$senderUid" to null
-        )
+                val updates = hashMapOf<String, Any?>(
+                    "connections/$receiverUid/$senderUid" to receiverConnection,
+                    "connections/$senderUid/$receiverUid" to senderConnection,
+                    "connectionRequests/$receiverUid/$senderUid" to null
+                )
 
-        database.reference
-            .updateChildren(updates)
-            .addOnSuccessListener {
-                onSuccess()
-            }
-            .addOnFailureListener {
-                onFailure(it)
+                database.reference
+                    .updateChildren(updates)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener {
+                        onFailure(it)
+                    }
             }
     }
 }
