@@ -290,7 +290,7 @@ fun ConnectionRequestScreen(
             Button(
                 onClick = {
                     navController.navigate(
-                        "sendConnectionPermissions/$receiverUid"
+                        "sendConnectionPermission/$receiverUid"
                     )
                 },
                 modifier = Modifier
