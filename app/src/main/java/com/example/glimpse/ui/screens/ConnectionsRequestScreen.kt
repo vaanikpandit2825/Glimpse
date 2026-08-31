@@ -185,7 +185,10 @@ fun ConnectionsRequestScreen(
                         primary = primary,
                         onAccept = {
                             navController.navigate(
-                                "sharingPermissions/${request.senderUid}"
+                                "sharingPermissions/${request.senderUid}" +
+                                        "?location=${request.senderSharing.location}" +
+                                        "&profile=${request.senderSharing.profile}" +
+                                        "&locationHistory=${request.senderSharing.locationHistory}"
                             )
                         },
                         onDecline = {
