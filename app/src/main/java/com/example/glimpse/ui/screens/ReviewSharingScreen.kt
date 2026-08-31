@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,7 +50,8 @@ import com.example.glimpse.model.SharingPermissions
 @Composable
 fun ReviewSharingScreen(
     navController: NavController,
-    senderUid: String
+    senderUid: String,
+    senderSharing: SharingPermissions
 ) {
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -128,12 +130,12 @@ fun ReviewSharingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 20.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 18.dp, bottom = 28.dp),
+                    .padding(top = 10.dp, bottom = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (profilePhotoUrl.isNotEmpty()) {
@@ -141,14 +143,14 @@ fun ReviewSharingScreen(
                         model = profilePhotoUrl,
                         contentDescription = "Profile photo",
                         modifier = Modifier
-                            .size(82.dp)
+                            .size(70.dp)
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Column(
                         modifier = Modifier
-                            .size(82.dp)
+                            .size(70.dp)
                             .clip(CircleShape)
                             .background(Color(0xFFE1F0FA)),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -157,38 +159,73 @@ fun ReviewSharingScreen(
                         Icon(
                             imageVector = Icons.Rounded.Person,
                             contentDescription = null,
-                            modifier = Modifier.size(40.dp),
+                            modifier = Modifier.size(34.dp),
                             tint = primary
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(9.dp))
 
                 Text(
                     text = name.ifEmpty { "Unknown user" },
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Spacer(modifier = Modifier.height(5.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "You're connecting with ${name.ifEmpty { "this person" }}",
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Text(
-                text = "WHAT ${name.ifEmpty { "THEY" }.uppercase()} CAN SEE",
-                fontSize = 12.sp,
+                text = "WHAT ${name.ifEmpty { "THEY" }.uppercase()} SHARES WITH YOU",
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SharingSummaryRow(
+                icon = Icons.Rounded.LocationOn,
+                title = "Current location",
+                description = "Their real-time location while active",
+                enabled = senderSharing.location,
+                primary = primary
+            )
+
+            SharingSummaryRow(
+                icon = Icons.Rounded.Person,
+                title = "Name and profile photo",
+                description = "Their public identity details",
+                enabled = senderSharing.profile,
+                primary = primary
+            )
+
+            SharingSummaryRow(
+                icon = Icons.Rounded.History,
+                title = "Previous locations",
+                description = "Their location history",
+                enabled = senderSharing.locationHistory,
+                primary = primary
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            Text(
+                text = "WHAT YOU SHARE WITH ${name.ifEmpty { "THEM" }.uppercase()}",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             SharingSummaryRow(
                 icon = Icons.Rounded.LocationOn,
@@ -209,12 +246,12 @@ fun ReviewSharingScreen(
             SharingSummaryRow(
                 icon = Icons.Rounded.History,
                 title = "Previous locations",
-                description = "Where you've been in the past",
+                description = "Your location history",
                 enabled = locationHistory,
                 primary = primary
             )
 
-            Spacer(modifier = Modifier.height(42.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Row(
                 modifier = Modifier
@@ -234,53 +271,51 @@ fun ReviewSharingScreen(
                 Column {
                     Text(
                         text = "You're in control",
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
 
-                    Spacer(modifier = Modifier.height(5.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = "You can change sharing permissions anytime.",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "Ready to connect?",
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Spacer(modifier = Modifier.height(7.dp))
+                Spacer(modifier = Modifier.height(5.dp))
 
                 Text(
                     text = "${name.ifEmpty { "This person" }} will only receive the information shown above.",
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             if (errorMessage.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = errorMessage,
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.error,
-                    fontSize = 13.sp
+                    fontSize = 12.sp
                 )
             }
         }
@@ -292,8 +327,8 @@ fun ReviewSharingScreen(
 
                 val permissions = SharingPermissions(
                     location = location,
-                    locationHistory = locationHistory,
-                    profile = profile
+                    profile = profile,
+                    locationHistory = locationHistory
                 )
 
                 viewModel.acceptConnectionRequest(
@@ -301,7 +336,7 @@ fun ReviewSharingScreen(
                     permissions = permissions,
                     onSuccess = {
                         isLoading = false
-                        errorMessage="Connection succedded"
+                        errorMessage = "Connection successful"
                     },
                     onFailure = { error ->
                         isLoading = false
@@ -314,10 +349,10 @@ fun ReviewSharingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = 24.dp,
-                    vertical = 18.dp
+                    horizontal = 20.dp,
+                    vertical = 14.dp
                 )
-                .height(54.dp),
+                .height(52.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = primary
@@ -329,7 +364,7 @@ fun ReviewSharingScreen(
                 } else {
                     "Confirm connection"
                 },
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -338,7 +373,7 @@ fun ReviewSharingScreen(
 
 @Composable
 private fun SharingSummaryRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     description: String,
     enabled: Boolean,
@@ -347,13 +382,13 @@ private fun SharingSummaryRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 15.dp),
+            .padding(vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(20.dp),
             tint = if (enabled) {
                 primary
             } else {
@@ -361,14 +396,14 @@ private fun SharingSummaryRow(
             }
         )
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(
             modifier = Modifier.weight(1f)
         ) {
             Text(
                 text = title,
-                fontSize = 15.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = if (enabled) {
                     MaterialTheme.colorScheme.onBackground
@@ -377,37 +412,35 @@ private fun SharingSummaryRow(
                 }
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
 
             Text(
                 text = description,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         if (enabled) {
             Icon(
                 imageVector = Icons.Rounded.CheckCircle,
                 contentDescription = "Shared",
-                modifier = Modifier.size(19.dp),
+                modifier = Modifier.size(18.dp),
                 tint = primary
             )
         } else {
             Text(
                 text = "Not shared",
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant
-                    )
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(
-                        horizontal = 9.dp,
-                        vertical = 5.dp
+                        horizontal = 8.dp,
+                        vertical = 4.dp
                     )
             )
         }
