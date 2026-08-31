@@ -414,10 +414,23 @@ class FirebaseRepository {
                         .child("createdAt")
                         .getValue(Long::class.java) ?: 0L
 
+                    val senderSharing = SharingPermissions(
+                        location = requestSnapshot
+                            .child("senderSharing/location")
+                            .getValue(Boolean::class.java) ?: false,
+                        profile = requestSnapshot
+                            .child("senderSharing/profile")
+                            .getValue(Boolean::class.java) ?: false,
+                        locationHistory = requestSnapshot
+                            .child("senderSharing/locationHistory")
+                            .getValue(Boolean::class.java) ?: false
+                    )
+
                     ConnectionRequest(
                         senderUid = senderUid,
                         status = status,
-                        createdAt = createdAt
+                        createdAt = createdAt,
+                        senderSharing = senderSharing
                     )
                 }
 
@@ -532,13 +545,15 @@ class FirebaseRepository {
                 val receiverConnection = mapOf(
                     "status" to "connected",
                     "connectedAt" to System.currentTimeMillis(),
-                    "sharing" to receiverSharing
+                    "sharing" to receiverSharing,
+                    "partnerSharing" to senderSharing
                 )
 
                 val senderConnection = mapOf(
                     "status" to "connected",
                     "connectedAt" to System.currentTimeMillis(),
-                    "sharing" to senderSharing
+                    "sharing" to senderSharing,
+                    "partnerSharing" to receiverSharing
                 )
 
                 val updates = hashMapOf<String, Any?>(
