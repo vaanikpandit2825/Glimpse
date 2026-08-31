@@ -45,6 +45,7 @@ import coil.compose.AsyncImage
 import com.example.glimpse.connection.ConnectionRequestViewModel
 import com.example.glimpse.model.ConnectionRequest
 
+
 @Composable
 fun ConnectionsRequestScreen(
     navController: NavController
