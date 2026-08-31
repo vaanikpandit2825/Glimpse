@@ -34,7 +34,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "connectionRequests"
+        startDestination = "addPerson"
     )
     {
         composable("signup"){
@@ -85,29 +85,55 @@ fun AppNavigation(){
         }
 
         composable(
-            route = "sharingPermissions/{senderUid}"
+            route = "sharingPermissions/{senderUid}?location={location}&profile={profile}&locationHistory={locationHistory}"
         ) { backStackEntry ->
-
             val senderUid =
-                backStackEntry.arguments?.getString("senderUid")
+                backStackEntry.arguments?.getString("senderUid") ?: ""
+
+            val location =
+                backStackEntry.arguments?.getString("location")?.toBoolean() ?: false
+
+            val profile =
+                backStackEntry.arguments?.getString("profile")?.toBoolean() ?: false
+
+            val locationHistory =
+                backStackEntry.arguments?.getString("locationHistory")?.toBoolean() ?: false
 
             SharingPermissionsScreen(
                 navController = navController,
-                senderUid = senderUid ?: ""
+                senderUid = senderUid,
+                senderSharing = SharingPermissions(
+                    location = location,
+                    profile = profile,
+                    locationHistory = locationHistory
+                )
             )
         }
         composable(
-            route = "reviewSharing/{senderUid}"
+            route = "reviewSharing/{senderUid}?location={location}&profile={profile}&locationHistory={locationHistory}"
         ) { backStackEntry ->
-            val senderUid =
-                backStackEntry.arguments?.getString("senderUid")
 
-            if (senderUid != null) {
-                ReviewSharingScreen(
-                    navController = navController,
-                    senderUid = senderUid
+            val senderUid =
+                backStackEntry.arguments?.getString("senderUid") ?: ""
+
+            val location =
+                backStackEntry.arguments?.getString("location")?.toBoolean() ?: false
+
+            val profile =
+                backStackEntry.arguments?.getString("profile")?.toBoolean() ?: false
+
+            val locationHistory =
+                backStackEntry.arguments?.getString("locationHistory")?.toBoolean() ?: false
+
+            ReviewSharingScreen(
+                navController = navController,
+                senderUid = senderUid,
+                senderSharing = SharingPermissions(
+                    location = location,
+                    profile = profile,
+                    locationHistory = locationHistory
                 )
-            }
+            )
         }
         composable(
             route="sendConnectionPermission/{receiverUid}"
