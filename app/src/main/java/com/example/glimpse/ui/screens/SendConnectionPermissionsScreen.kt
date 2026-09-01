@@ -270,7 +270,7 @@ fun SendConnectionPermissionsScreen(
 
                 viewModel.sendConnectionRequest(
                     receiverUid = receiverUid,
-                    permission = permissions,
+                    permissions = permissions,
                     onSuccess = {
                         isLoading = false
                         navController.popBackStack()
