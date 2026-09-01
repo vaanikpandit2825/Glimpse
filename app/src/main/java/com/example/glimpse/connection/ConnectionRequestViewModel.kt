@@ -13,7 +13,7 @@ class ConnectionRequestViewModel : ViewModel() {
     fun sendConnectionRequest(
         receiverUid: String,
         onSuccess: () -> Unit,
-        permission: SharingPermissions,
+        permissions: SharingPermissions,
         onFailure: (Exception) -> Unit
     ) {
         val senderUid =
@@ -27,7 +27,7 @@ class ConnectionRequestViewModel : ViewModel() {
         repository.sendConnectionRequest(
             senderUid = senderUid,
             receiverUid = receiverUid,
-            sharingPermissions = permission,
+            sharingPermissions = permissions,
             onSuccess = onSuccess,
             onFailure = onFailure
         )
