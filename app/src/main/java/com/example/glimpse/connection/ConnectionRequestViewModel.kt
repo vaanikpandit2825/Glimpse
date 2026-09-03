@@ -106,4 +106,21 @@ class ConnectionRequestViewModel : ViewModel() {
             onFailure = onFailure
         )
     }
+
+    fun getConnections(
+        onResult: (List<ConnectionRequest>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ){
+        val uid= FirebaseAuth.getInstance().currentUser?.uid
+
+        if(uid==null){
+            onFailure(Exception("User not logged in"))
+            return
+        }
+        repository.getConnections(
+            uid=uid,
+            onResult=onResult,
+            onFailure=onFailure
+        )
+    }
 }
