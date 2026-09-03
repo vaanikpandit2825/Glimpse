@@ -20,6 +20,7 @@ import com.example.glimpse.ui.screens.ConnectionsRequestScreen
 import com.example.glimpse.ui.screens.ReviewSharingScreen
 import com.example.glimpse.ui.screens.SharingPermissionsScreen
 import com.example.glimpse.ui.screens.SendConnectionPermissionsScreen
+import com.example.glimpse.ui.screens.ConnectionsScreen
 
 @Composable
 fun AppNavigation(){
@@ -27,14 +28,14 @@ fun AppNavigation(){
     val user = FirebaseAuth.getInstance().currentUser
 
     val startDestination = if(user!=null){
-        "home"
+        "connections"
     }
     else{
         "signup"
     }
     NavHost(
         navController = navController,
-        startDestination = "addPerson"
+        startDestination = "connections"
     )
     {
         composable("signup"){
@@ -147,6 +148,9 @@ fun AppNavigation(){
                     receiverUid=receiverUid
                 )
             }
+        }
+        composable("connections"){
+            ConnectionsScreen(navController)
         }
     }
 }
