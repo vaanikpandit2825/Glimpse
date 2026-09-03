@@ -572,4 +572,104 @@ class FirebaseRepository {
                     }
             }
     }
+    fun getConnections(
+        uid: String,
+        onResult: (List<ConnectionRequest>) -> Unit,
+        onFailure: (Exception) -> Unit = {}
+    ) {
+        database
+            .getReference("connections")
+            .child(uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val connections = snapshot.children.mapNotNull { connectionSnapshot ->
+
+                    val partnerUid =
+                        connectionSnapshot.key ?: return@mapNotNull null
+
+                    val status =
+                        connectionSnapshot
+                            .child("status")
+                            .getValue(String::class.java) ?: ""
+
+                    if (status != "connected") {
+                        return@mapNotNull null
+                    }
+
+                    ConnectionRequest(
+                        senderUid = partnerUid,
+                        status = status,
+                        createdAt = connectionSnapshot
+                            .child("connectedAt")
+                            .getValue(Long::class.java) ?: 0L,
+                        senderSharing = SharingPermissions(
+                            location = connectionSnapshot
+                                .child("partnerSharing/location")
+                                .getValue(Boolean::class.java) ?: false,
+
+                            profile = connectionSnapshot
+                                .child("partnerSharing/profile")
+                                .getValue(Boolean::class.java) ?: false,
+
+                            locationHistory = connectionSnapshot
+                                .child("partnerSharing/locationHistory")
+                                .getValue(Boolean::class.java) ?: false
+                        )
+                    )
+                }
+
+                if (connections.isEmpty()) {
+                    onResult(emptyList())
+                    return@addOnSuccessListener
+                }
+
+                val enrichedConnections = mutableListOf<ConnectionRequest>()
+                var completed = 0
+
+                connections.forEach { connection ->
+
+                    getUserProfile(
+                        uid = connection.senderUid,
+
+                        onResult = { name, profilePhotoUrl ->
+
+                            enrichedConnections.add(
+                                connection.copy(
+                                    name = name,
+                                    profilePhotoUrl = profilePhotoUrl
+                                )
+                            )
+
+                            completed++
+
+                            if (completed == connections.size) {
+                                onResult(
+                                    enrichedConnections.sortedByDescending {
+                                        it.createdAt
+                                    }
+                                )
+                            }
+                        },
+
+                        onFailure = {
+                            enrichedConnections.add(connection)
+
+                            completed++
+
+                            if (completed == connections.size) {
+                                onResult(
+                                    enrichedConnections.sortedByDescending {
+                                        it.createdAt
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
 }
