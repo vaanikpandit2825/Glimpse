@@ -1,8 +1,8 @@
 package com.example.glimpse.auth
 
+import com.example.glimpse.firebase.FirebaseRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
-import com.example.glimpse.firebase.FirebaseRepository
 
 class AuthRepository {
 
@@ -12,7 +12,7 @@ class AuthRepository {
         "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
     )
 
-    private val firebaseRepository=FirebaseRepository()
+    private val firebaseRepository = FirebaseRepository()
 
     private val profilesRef = database.getReference("profiles")
 
@@ -24,18 +24,21 @@ class AuthRepository {
         onFailure: (Exception) -> Unit
     ) {
 
-        auth.createUserWithEmailAndPassword(email, password)
+        auth.createUserWithEmailAndPassword(
+            email.trim(),
+            password
+        )
             .addOnSuccessListener { result ->
 
                 val uid = result.user?.uid
 
                 if (uid == null) {
-                    onFailure(Exception("User ID is null"))
+                    onFailure(Exception("Firebase created the account but returned no user ID"))
                     return@addOnSuccessListener
                 }
 
                 val profile = mapOf(
-                    "name" to name,
+                    "name" to name.trim(),
                     "profilePhotoUrl" to ""
                 )
 
@@ -54,12 +57,12 @@ class AuthRepository {
                             }
                         )
                     }
-                    .addOnFailureListener {
-                        onFailure(it)
+                    .addOnFailureListener { exception ->
+                        onFailure(exception)
                     }
             }
-            .addOnFailureListener {
-                onFailure(it)
+            .addOnFailureListener { exception ->
+                onFailure(exception)
             }
     }
 
@@ -69,12 +72,16 @@ class AuthRepository {
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        auth.signInWithEmailAndPassword(email, password)
+
+        auth.signInWithEmailAndPassword(
+            email.trim(),
+            password
+        )
             .addOnSuccessListener {
                 onSuccess()
             }
-            .addOnFailureListener {
-                onFailure(it)
+            .addOnFailureListener { exception ->
+                onFailure(exception)
             }
     }
 }
