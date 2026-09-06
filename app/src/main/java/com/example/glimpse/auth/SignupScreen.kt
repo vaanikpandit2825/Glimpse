@@ -60,6 +60,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 
 private object GlimpseColors {
     val Background = Color(0xFFF7F9FF)
@@ -374,6 +378,7 @@ fun SignupScreen(
                         .clip(RoundedCornerShape(50))
                         .background(GlimpseColors.PrimaryContainer)
                         .clickable {
+
                             when {
                                 name.isBlank() -> {
                                     errorMessage = "Please enter your name"
@@ -401,28 +406,30 @@ fun SignupScreen(
                                                 }
                                             }
                                         },
-                                        onFailure = {
-                                            errorMessage = when {
-                                                it.message?.contains(
-                                                    "password",
-                                                    true
-                                                ) == true ->
-                                                    "Password must be at least 6 characters"
+                                        onFailure = { exception ->
 
-                                                it.message?.contains(
-                                                    "already",
-                                                    true
-                                                ) == true ->
+                                            errorMessage = when (exception) {
+
+                                                is FirebaseAuthUserCollisionException ->
                                                     "User with this email already exists"
 
-                                                it.message?.contains(
-                                                    "badly formatted",
-                                                    true
-                                                ) == true ->
+                                                is FirebaseAuthWeakPasswordException ->
+                                                    "Password must be at least 6 characters"
+
+                                                is FirebaseAuthInvalidCredentialsException ->
                                                     "Please enter a valid email address"
 
-                                                else ->
-                                                    "Signup failed. Please try again later"
+                                                else -> {
+
+                                                    if (exception is FirebaseAuthException) {
+                                                        "Signup failed: ${exception.errorCode}"
+                                                    } else {
+                                                        "Signup failed: ${
+                                                            exception.message
+                                                                ?: "Unknown error"
+                                                        }"
+                                                    }
+                                                }
                                             }
                                         }
                                     )
@@ -585,6 +592,7 @@ private fun LensBackgroundArt(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier) {
+
         Box(
             modifier = Modifier
                 .offset(
@@ -608,6 +616,7 @@ private fun LensBackgroundArt(
                 )
                 .size(380.dp)
         ) {
+
             drawCircle(
                 color = GlimpseColors.PrimaryContainer.copy(
                     alpha = 0.12f
