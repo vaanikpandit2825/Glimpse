@@ -173,6 +173,7 @@ fun ConnectionsRequestScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
+                    .weight(1f)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
