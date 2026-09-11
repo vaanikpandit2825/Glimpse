@@ -405,7 +405,9 @@ fun ProfileScreen(
                             }
 
                             TextButton(
-                                onClick = { }
+                                onClick = {
+                                    navController.navigate("addperson")
+                                }
                             ) {
 
                                 Text(
