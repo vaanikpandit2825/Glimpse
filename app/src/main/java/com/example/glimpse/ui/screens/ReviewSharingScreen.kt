@@ -46,6 +46,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.glimpse.connection.ConnectionRequestViewModel
 import com.example.glimpse.model.SharingPermissions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @Composable
 fun ReviewSharingScreen(
@@ -131,6 +133,7 @@ fun ReviewSharingScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Column(
                 modifier = Modifier
@@ -336,7 +339,11 @@ fun ReviewSharingScreen(
                     permissions = permissions,
                     onSuccess = {
                         isLoading = false
-                        errorMessage = "Connection successful"
+                        navController.navigate("Connections"){
+                            popUpTo("connectionRequests"){
+                                inclusive=true
+                            }
+                        }
                     },
                     onFailure = { error ->
                         isLoading = false
