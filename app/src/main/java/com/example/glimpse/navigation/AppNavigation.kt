@@ -28,14 +28,14 @@ fun AppNavigation(){
     val user = FirebaseAuth.getInstance().currentUser
 
     val startDestination = if(user!=null){
-        "connections"
+        "login"
     }
     else{
         "signup"
     }
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = "home"
     )
     {
         composable("signup"){
