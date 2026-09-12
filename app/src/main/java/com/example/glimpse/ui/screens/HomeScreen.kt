@@ -15,19 +15,22 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,9 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.glimpse.BuildConfig
 import com.example.glimpse.Location.LocationRepository
@@ -62,19 +65,21 @@ import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Position
 
 private val GlimpseBlue = Color(0xFF0077BE)
-private val GlimpseNavy = Color(0xFF151C24)
+private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseWhite = Color(0xFFFFFFFF)
 private val GlimpseSoftBlue = Color(0xFFEAF4FA)
-private val GlimpseSoftGray = Color(0xFFF4F5F4)
-private val GlimpseTextGray = Color(0xFF707980)
+private val GlimpseSoftGray = Color(0xFFF5F7F8)
+private val GlimpseBorder = Color(0xFFE5EAED)
+private val GlimpseTextGray = Color(0xFF69757D)
+private val GlimpseGreen = Color(0xFF20B878)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val locationRepository = remember {
         LocationRepository(context)
@@ -118,10 +123,7 @@ fun HomeScreen(
     fun moveToCurrentLocation() {
         locationRepository.getCurrentLocation { location ->
             if (location == null) {
-                Log.d(
-                    "GLIMPSE_LOCATION",
-                    "Current location is null"
-                )
+                Log.d("GLIMPSE_LOCATION", "Current location is null")
                 return@getCurrentLocation
             }
 
@@ -132,7 +134,7 @@ fun HomeScreen(
                             location.longitude,
                             location.latitude
                         ),
-                        zoom = 16.0
+                        zoom = 15.5
                     )
                 )
             }
@@ -141,30 +143,28 @@ fun HomeScreen(
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = 112.dp,
+        sheetPeekHeight = 108.dp,
         sheetContainerColor = GlimpseWhite,
         sheetShape = RoundedCornerShape(
-            topStart = 28.dp,
-            topEnd = 28.dp
+            topStart = 30.dp,
+            topEnd = 30.dp
         ),
-        sheetShadowElevation = 12.dp,
+        sheetShadowElevation = 16.dp,
         sheetContent = {
             CircleSheet(
                 hasConnections = userLocations.size > 1,
                 onAddPeople = {
-                    navController.navigate("find_people")
+                    navController.navigate("addperson")
                 },
                 onOpenConnections = {
                     navController.navigate("connections")
                 }
             )
         }
-    ) { _ ->
-
+    ) {
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-
             MaplibreMap(
                 modifier = Modifier.fillMaxSize(),
                 baseStyle = BaseStyle.Uri(
@@ -187,11 +187,6 @@ fun HomeScreen(
                                 return@getCurrentLocation
                             }
 
-                            Log.d(
-                                "GLIMPSE_LOCATION",
-                                "Lat: ${location.latitude}, Lng: ${location.longitude}"
-                            )
-
                             scope.launch {
                                 cameraState.animateTo(
                                     CameraPosition(
@@ -199,7 +194,7 @@ fun HomeScreen(
                                             location.longitude,
                                             location.latitude
                                         ),
-                                        zoom = 16.0
+                                        zoom = 15.5
                                     )
                                 )
                             }
@@ -221,11 +216,6 @@ fun HomeScreen(
                                 onSuccess = {
                                     firebaseRepository.getUsersLocations { locations ->
                                         userLocations = locations
-
-                                        Log.d(
-                                            "GLIMPSE_LOCATION",
-                                            "Updated locations: ${locations.size}"
-                                        )
                                     }
                                 }
                             )
@@ -239,61 +229,27 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 12.dp
+                        horizontal = 18.dp,
+                        vertical = 12.dp
                     ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
-                Surface(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .shadow(
-                            elevation = 6.dp,
-                            shape = CircleShape
-                        ),
-                    shape = CircleShape,
-                    color = GlimpseWhite.copy(alpha = 0.96f)
-                ) {
-                    IconButton(
-                        onClick = {
-                            navController.navigate("profile")
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Person,
-                            contentDescription = "Profile",
-                            tint = GlimpseNavy,
-                            modifier = Modifier.size(23.dp)
-                        )
+                FloatingHomeButton(
+                    icon = Icons.Rounded.Person,
+                    contentDescription = "Profile",
+                    onClick = {
+                        navController.navigate("profile")
                     }
-                }
+                )
 
-                Surface(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .shadow(
-                            elevation = 6.dp,
-                            shape = CircleShape
-                        ),
-                    shape = CircleShape,
-                    color = GlimpseWhite.copy(alpha = 0.96f)
-                ) {
-                    IconButton(
-                        onClick = {
-                            navController.navigate("connectionRequests")
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Notifications,
-                            contentDescription = "Notifications",
-                            tint = GlimpseNavy,
-                            modifier = Modifier.size(23.dp)
-                        )
+                FloatingHomeButton(
+                    icon = Icons.Rounded.Notifications,
+                    contentDescription = "Notifications",
+                    onClick = {
+                        navController.navigate("connectionRequests")
                     }
-                }
+                )
             }
 
             Surface(
@@ -301,10 +257,10 @@ fun HomeScreen(
                     .align(Alignment.BottomEnd)
                     .padding(
                         end = 18.dp,
-                        bottom = 135.dp
+                        bottom = 124.dp
                     )
                     .shadow(
-                        elevation = 6.dp,
+                        elevation = 10.dp,
                         shape = CircleShape
                     ),
                 shape = CircleShape,
@@ -314,16 +270,45 @@ fun HomeScreen(
                     onClick = {
                         moveToCurrentLocation()
                     },
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier.size(54.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.LocationOn,
                         contentDescription = "My location",
                         tint = GlimpseBlue,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(25.dp)
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FloatingHomeButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .size(48.dp)
+            .shadow(
+                elevation = 9.dp,
+                shape = CircleShape
+            ),
+        shape = CircleShape,
+        color = GlimpseWhite.copy(alpha = 0.96f)
+    ) {
+        IconButton(
+            onClick = onClick
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = GlimpseNavy,
+                modifier = Modifier.size(23.dp)
+            )
         }
     }
 }
@@ -334,54 +319,50 @@ private fun CircleSheet(
     onAddPeople: () -> Unit,
     onOpenConnections: () -> Unit
 ) {
+    var selectedTab by remember {
+        mutableStateOf(0)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(
-                start = 18.dp,
-                end = 18.dp,
-                bottom = 12.dp
+                start = 20.dp,
+                end = 20.dp,
+                bottom = 16.dp
             )
     ) {
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
                     top = 10.dp,
-                    bottom = 12.dp
+                    bottom = 17.dp
                 ),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(
-                        width = 42.dp,
-                        height = 4.dp
-                    )
+                    .width(38.dp)
+                    .height(4.dp)
                     .background(
-                        color = Color(0xFFD5D9DB),
-                        shape = RoundedCornerShape(50)
+                        Color(0xFFD0D7DC),
+                        RoundedCornerShape(50)
                     )
             )
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    onOpenConnections()
-                },
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "Your Circle",
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 23.sp,
                     fontWeight = FontWeight.Bold,
                     color = GlimpseNavy
                 )
@@ -392,32 +373,30 @@ private fun CircleSheet(
 
                 Text(
                     text = if (hasConnections) {
-                        "People in your circle"
+                        "${if (selectedTab == 0) "People" else if (selectedTab == 1) "Places" else "Groups"} in your circle"
                     } else {
-                        "See your people on the map"
+                        "People who matter. Closer."
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 13.sp,
                     color = GlimpseTextGray
                 )
             }
 
             Surface(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clickable {
-                        onAddPeople()
-                    },
+                    .size(46.dp)
+                    .clickable(onClick = onAddPeople),
                 shape = CircleShape,
                 color = GlimpseSoftBlue
             ) {
-                IconButton(
-                    onClick = onAddPeople
+                Box(
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Add,
                         contentDescription = "Add people",
                         tint = GlimpseBlue,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -427,148 +406,405 @@ private fun CircleSheet(
             modifier = Modifier.height(18.dp)
         )
 
-        if (!hasConnections) {
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        onAddPeople()
-                    },
-                shape = RoundedCornerShape(20.dp),
-                color = GlimpseSoftGray
-            ) {
-                Row(
-                    modifier = Modifier.padding(
-                        horizontal = 16.dp,
-                        vertical = 15.dp
-                    ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(
-                                color = GlimpseWhite,
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = null,
-                            tint = GlimpseBlue,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(
-                        modifier = Modifier.size(12.dp)
-                    )
-
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = "Find people",
-                            color = GlimpseNavy,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Spacer(
-                            modifier = Modifier.height(2.dp)
-                        )
-
-                        Text(
-                            text = "Add friends and family to your circle",
-                            color = GlimpseTextGray,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    Icon(
-                        imageVector = Icons.Rounded.Add,
-                        contentDescription = null,
-                        tint = GlimpseBlue,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+        CircleTabs(
+            selectedTab = selectedTab,
+            onTabSelected = {
+                selectedTab = it
             }
+        )
 
-        } else {
+        Spacer(
+            modifier = Modifier.height(16.dp)
+        )
 
-            Text(
-                text = "People nearby",
-                color = GlimpseTextGray,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(
-                    start = 4.dp,
-                    bottom = 10.dp
-                )
+        when (selectedTab) {
+            0 -> PeopleContent(
+                hasConnections = hasConnections,
+                onAddPeople = onAddPeople,
+                onOpenConnections = onOpenConnections
             )
 
-            CirclePersonPlaceholder(
-                name = "Connected person",
-                distance = "Location available"
+            1 -> PlacesContent()
+
+            2 -> GroupsContent()
+        }
+    }
+}
+
+@Composable
+private fun CircleTabs(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                GlimpseSoftGray,
+                RoundedCornerShape(18.dp)
+            )
+            .padding(4.dp)
+    ) {
+        CircleTab(
+            text = "People",
+            selected = selectedTab == 0,
+            modifier = Modifier.weight(1f),
+            onClick = {
+                onTabSelected(0)
+            }
+        )
+
+        CircleTab(
+            text = "Places",
+            selected = selectedTab == 1,
+            modifier = Modifier.weight(1f),
+            onClick = {
+                onTabSelected(1)
+            }
+        )
+
+        CircleTab(
+            text = "Groups",
+            selected = selectedTab == 2,
+            modifier = Modifier.weight(1f),
+            onClick = {
+                onTabSelected(2)
+            }
+        )
+    }
+}
+
+@Composable
+private fun CircleTab(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(15.dp),
+        color = if (selected) {
+            GlimpseWhite
+        } else {
+            Color.Transparent
+        }
+    ) {
+        Box(
+            modifier = Modifier.padding(
+                vertical = 10.dp
+            ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                fontWeight = if (selected) {
+                    FontWeight.SemiBold
+                } else {
+                    FontWeight.Medium
+                },
+                color = if (selected) {
+                    GlimpseBlue
+                } else {
+                    GlimpseTextGray
+                }
             )
         }
     }
 }
 
 @Composable
-private fun CirclePersonPlaceholder(
-    name: String,
-    distance: String
+private fun PeopleContent(
+    hasConnections: Boolean,
+    onAddPeople: () -> Unit,
+    onOpenConnections: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                vertical = 7.dp
-            ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-
-        Box(
+    if (!hasConnections) {
+        Surface(
             modifier = Modifier
-                .size(46.dp)
-                .background(
-                    color = GlimpseSoftBlue,
-                    shape = CircleShape
+                .fillMaxWidth()
+                .clickable(onClick = onAddPeople),
+            shape = RoundedCornerShape(22.dp),
+            color = GlimpseSoftBlue
+        ) {
+            Row(
+                modifier = Modifier.padding(
+                    horizontal = 16.dp,
+                    vertical = 16.dp
                 ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Person,
-                contentDescription = null,
-                tint = GlimpseBlue,
-                modifier = Modifier.size(23.dp)
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = CircleShape,
+                    color = GlimpseWhite
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PersonAdd,
+                            contentDescription = null,
+                            tint = GlimpseBlue,
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+                }
+
+                Spacer(
+                    modifier = Modifier.width(13.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "Add people you trust",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlimpseNavy
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(3.dp)
+                    )
+
+                    Text(
+                        text = "Start building your circle",
+                        fontSize = 12.sp,
+                        color = GlimpseTextGray
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = GlimpseTextGray,
+                    modifier = Modifier.size(21.dp)
+                )
+            }
         }
-
-        Spacer(
-            modifier = Modifier.size(12.dp)
-        )
-
-        Column(
-            modifier = Modifier.weight(1f)
+    } else {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOpenConnections),
+            shape = RoundedCornerShape(22.dp),
+            color = GlimpseWhite
         ) {
-            Text(
-                text = name,
-                color = GlimpseNavy,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        GlimpseSoftGray,
+                        RoundedCornerShape(22.dp)
+                    )
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 15.dp
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(50.dp),
+                    shape = CircleShape,
+                    color = GlimpseSoftBlue
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Person,
+                            contentDescription = null,
+                            tint = GlimpseBlue,
+                            modifier = Modifier.size(25.dp)
+                        )
+                    }
+                }
+
+                Spacer(
+                    modifier = Modifier.width(13.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "Your people",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlimpseNavy
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(4.dp)
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .background(
+                                    GlimpseGreen,
+                                    CircleShape
+                                )
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(6.dp)
+                        )
+
+                        Text(
+                            text = "Tap to view your connections",
+                            fontSize = 12.sp,
+                            color = GlimpseTextGray
+                        )
+                    }
+                }
+
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = GlimpseTextGray,
+                    modifier = Modifier.size(21.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlacesContent() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = GlimpseSoftGray
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                horizontal = 16.dp,
+                vertical = 16.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = GlimpseWhite
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Place,
+                        contentDescription = null,
+                        tint = GlimpseBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
 
             Spacer(
-                modifier = Modifier.height(2.dp)
+                modifier = Modifier.width(13.dp)
             )
 
-            Text(
-                text = distance,
-                color = GlimpseTextGray,
-                style = MaterialTheme.typography.bodySmall
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Saved places",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GlimpseNavy
+                )
+
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
+
+                Text(
+                    text = "Home, College, Work and more",
+                    fontSize = 12.sp,
+                    color = GlimpseTextGray
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = GlimpseTextGray,
+                modifier = Modifier.size(21.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupsContent() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = GlimpseSoftGray
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                horizontal = 16.dp,
+                vertical = 16.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = GlimpseSoftBlue
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Groups,
+                        contentDescription = null,
+                        tint = GlimpseBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.width(13.dp)
+            )
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Create a group",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GlimpseNavy
+                )
+
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
+
+                Text(
+                    text = "Family, Friends, College, Trips",
+                    fontSize = 12.sp,
+                    color = GlimpseTextGray
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = GlimpseTextGray,
+                modifier = Modifier.size(21.dp)
             )
         }
     }
