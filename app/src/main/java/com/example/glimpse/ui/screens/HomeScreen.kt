@@ -229,7 +229,9 @@ fun HomeScreen(
                     "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
                 ),
                 cameraState = cameraState
-            )
+            ){
+
+            }
 
             if (!locationPermissionGranted) {
                 RequestLocationPermission(
@@ -657,6 +659,8 @@ private fun PeopleContent(
                 val personLocation=userLocations.find {
                     it.uid==connection.senderUid
                 }
+
+                val locationAvailable=connection.senderSharing.location && personLocation!=null
 
                 Row(
                     modifier= Modifier
