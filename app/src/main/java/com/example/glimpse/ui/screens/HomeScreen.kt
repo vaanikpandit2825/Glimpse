@@ -1,5 +1,6 @@
 package com.example.glimpse.ui.screens
 
+import android.R
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -103,6 +104,7 @@ import coil.compose.AsyncImage
 import com.example.glimpse.connection.ConnectionRequestViewModel
 import com.example.glimpse.model.ConnectionRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.glimpse.ui.theme.Surface
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val GlimpseNavy = Color(0xFF14202B)
@@ -476,7 +478,8 @@ private fun CircleSheet(
             0 -> PeopleContent(
                 hasConnections = hasConnections,
                 onAddPeople = onAddPeople,
-                onOpenConnections = onOpenConnections
+                onOpenConnections = onOpenConnections,
+                connections=connections
             )
 
             1 -> PlacesContent()
@@ -573,7 +576,8 @@ private fun CircleTab(
 private fun PeopleContent(
     hasConnections: Boolean,
     onAddPeople: () -> Unit,
-    onOpenConnections: () -> Unit
+    onOpenConnections: () -> Unit,
+    connections:List<ConnectionRequest>
 ) {
     if (!hasConnections) {
         Surface(
@@ -640,92 +644,59 @@ private fun PeopleContent(
                 )
             }
         }
-    } else {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenConnections),
-            shape = RoundedCornerShape(22.dp),
-            color = GlimpseWhite
+    } else{
+        Column(
+            modifier=Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        GlimpseSoftGray,
-                        RoundedCornerShape(22.dp)
-                    )
-                    .padding(
-                        horizontal = 16.dp,
-                        vertical = 15.dp
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(50.dp),
-                    shape = CircleShape,
-                    color = GlimpseSoftBlue
+            connections.forEach{ connection ->
+                Row(
+                    modifier= Modifier
+                        .fillMaxWidth()
+                        .clickable{
+                            Log.d(
+                                "GLIMPSE_CONNECTION",
+                                "Selected ${connection.name} (${connection.senderUid})"
+                            )
+                        }
+                        .padding(vertical = 8.dp)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Person,
-                            contentDescription = null,
-                            tint = GlimpseBlue,
-                            modifier = Modifier.size(25.dp)
-                        )
-                    }
-                }
-
-                Spacer(
-                    modifier = Modifier.width(13.dp)
-                )
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "Your people",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = GlimpseNavy
-                    )
-
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
+                    if (connection.profilePhotoUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = connection.profilePhotoUrl,
+                            contentDescription = "Profile photo",
                             modifier = Modifier
-                                .size(7.dp)
-                                .background(
-                                    GlimpseGreen,
-                                    CircleShape
+                                .size(48.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(48.dp),
+                            shape = CircleShape,
+                            color = GlimpseSoftBlue
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Person,
+                                    contentDescription = null,
+                                    tint = GlimpseBlue,
+                                    modifier = Modifier.size(24.dp)
                                 )
-                        )
-
-                        Spacer(
-                            modifier = Modifier.width(6.dp)
-                        )
-
-                        Text(
-                            text = "Tap to view your connections",
-                            fontSize = 12.sp,
-                            color = GlimpseTextGray
-                        )
+                            }
+                        }
                     }
+                    Spacer(
+                        modifier=Modifier.width(13.dp)
+                    )
+                    Text(
+                        text=connection.name,
+                        color=GlimpseNavy,
+                        fontSize=15.sp,
+                        fontWeight= FontWeight.SemiBold
+                    )
                 }
-
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = GlimpseTextGray,
-                    modifier = Modifier.size(21.dp)
-                )
             }
         }
     }
