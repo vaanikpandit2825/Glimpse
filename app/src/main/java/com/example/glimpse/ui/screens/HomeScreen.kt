@@ -696,6 +696,15 @@ private fun PeopleContent(
                         fontSize=15.sp,
                         fontWeight= FontWeight.SemiBold
                     )
+                    Text(
+                        text=if(connection.senderSharing.location){
+                            "Location Sharing On"
+                        }else{
+                            "Location Sharing Off"
+                        },
+                        fontSize = 12.sp,
+                        color=GlimpseTextGray
+                    )
                 }
             }
         }
