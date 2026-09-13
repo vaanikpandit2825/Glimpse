@@ -482,6 +482,7 @@ private fun CircleSheet(
                 hasConnections = hasConnections,
                 onAddPeople = onAddPeople,
                 onOpenConnections = onOpenConnections,
+                userLocations = userLocations,
                 connections=connections
             )
 
@@ -579,6 +580,7 @@ private fun CircleTab(
 private fun PeopleContent(
     hasConnections: Boolean,
     onAddPeople: () -> Unit,
+    userLocations: List<UserLocation>,
     onOpenConnections: () -> Unit,
     connections:List<ConnectionRequest>
 ) {
@@ -652,6 +654,10 @@ private fun PeopleContent(
             modifier=Modifier.fillMaxWidth()
         ) {
             connections.forEach{ connection ->
+                val personLocation=userLocations.find {
+                    it.uid==connection.senderUid
+                }
+
                 Row(
                     modifier= Modifier
                         .fillMaxWidth()
