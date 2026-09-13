@@ -105,6 +105,7 @@ import com.example.glimpse.connection.ConnectionRequestViewModel
 import com.example.glimpse.model.ConnectionRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.ui.theme.Surface
+import com.google.firebase.firestore.auth.User
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val GlimpseNavy = Color(0xFF14202B)
@@ -209,6 +210,7 @@ fun HomeScreen(
             CircleSheet(
                 hasConnections = connections.value.isNotEmpty(),
                 connections=connections.value,
+                userLocations = userLocations,
                 onAddPeople = {
                     navController.navigate("addperson")
                 },
@@ -374,6 +376,7 @@ private fun CircleSheet(
     hasConnections: Boolean,
     onAddPeople: () -> Unit,
     onOpenConnections: () -> Unit,
+    userLocations: List<UserLocation>,
     connections:List<ConnectionRequest>
 ) {
     var selectedTab by remember {
