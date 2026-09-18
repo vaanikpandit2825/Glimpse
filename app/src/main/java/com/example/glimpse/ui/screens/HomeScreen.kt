@@ -106,6 +106,11 @@ import com.example.glimpse.model.ConnectionRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.ui.theme.Surface
 import com.google.firebase.firestore.auth.User
+import org.maplibre.compose.sources.rememberGeoJsonSource
+import org.maplibre.compose.sources.GeoJsonData
+import org.maplibre.spatialk.geojson.Point
+import org.maplibre.compose.layers.CircleLayer
+import org.maplibre.compose.expressions.dsl.const
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val GlimpseNavy = Color(0xFF14202B)
@@ -230,7 +235,16 @@ fun HomeScreen(
                 ),
                 cameraState = cameraState
             ){
-
+                val source=rememberGeoJsonSource(
+                    data= GeoJsonData.Features(
+                        Point(Position(80.0,13.0))
+                    )
+                )
+                CircleLayer(
+                    id="test-marker-layer",
+                    source=source,
+                    color=const(Color.Blue)
+                )
             }
 
             if (!locationPermissionGranted) {
