@@ -107,6 +107,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.ui.theme.Surface
 import com.google.firebase.firestore.auth.User
 import org.maplibre.compose.sources.rememberGeoJsonSource
+import org.maplibre.compose.expressions.dsl.const
+import org.maplibre.spatialk.geojson.FeatureCollection
+import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.spatialk.geojson.Point
 import org.maplibre.compose.layers.CircleLayer
@@ -234,17 +237,30 @@ fun HomeScreen(
                     "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
                 ),
                 cameraState = cameraState
-            ){
-                val source=rememberGeoJsonSource(
-                    data= GeoJsonData.Features(
-                        Point(Position(80.0,13.0))
+            ) {
+                val myLocation = userLocations.find {
+                    it.uid == currentUser?.uid
+                }
+
+                if (myLocation != null) {
+
+                    val source = rememberGeoJsonSource(
+                        data = GeoJsonData.Features(
+                            Point(
+                                Position(
+                                    longitude = myLocation.longitude,
+                                    latitude = myLocation.latitude
+                                )
+                            )
+                        )
                     )
-                )
-                CircleLayer(
-                    id="test-marker-layer",
-                    source=source,
-                    color=const(Color.Blue)
-                )
+
+                    CircleLayer(
+                        id = "my-location-layer",
+                        source = source,
+                        color = const(Color.Blue)
+                    )
+                }
             }
 
             if (!locationPermissionGranted) {
