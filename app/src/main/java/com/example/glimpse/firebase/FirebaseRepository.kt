@@ -10,19 +10,18 @@ import com.google.firebase.database.Transaction
 import com.google.firebase.database.FirebaseDatabase
 import com.example.glimpse.model.ConnectionRequest
 import com.example.glimpse.model.SharingPermissions
-
+import com.example.glimpse.model.SavedPlace
 
 class FirebaseRepository {
 
     private val database = FirebaseDatabase.getInstance(
         "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
     )
-
     private val locationsRef = database.getReference("locations")
     private val profilesRef = database.getReference("profiles")
     private val glimpseIdsRef = database.getReference("glimpseIds")
-
     private val connectionRequestsRef = database.getReference("connectionRequests")
+    private val savedPlacesRef=database.getReference("SavedPlaces")
 
     fun updateLocation(
         uid: String,
@@ -667,6 +666,76 @@ class FirebaseRepository {
                         }
                     )
                 }
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+    fun SavedPlace(
+        uid:String,
+        place:SavedPlace,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ){
+        savedPlacesRef
+            .child(uid)
+            .child(place.id)
+            .setValue(place)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+    fun updateSavedPlace(
+        uid: String,
+        place: SavedPlace,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        savedPlacesRef
+            .child(uid)
+            .child(place.id)
+            .setValue(place)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+    fun deleteSavedPlace(
+        uid: String,
+        placeId: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        savedPlacesRef
+            .child(uid)
+            .child(placeId)
+            .removeValue()
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+    fun getSavedPlaces(
+        uid: String,
+        onResult: (List<SavedPlace>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        savedPlacesRef
+            .child(uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val places = snapshot.children.mapNotNull {child->
+                    child.getValue(SavedPlace::class.java)
+                }
+
+                onResult(places)
             }
             .addOnFailureListener {
                 onFailure(it)
