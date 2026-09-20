@@ -43,4 +43,43 @@ class SavedPlaceViewModel:ViewModel(){
             onFailure = onFailure
         )
     }
+    fun updateSavedPlace(
+        place: SavedPlace,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (uid == null) {
+            onFailure(Exception("User not logged in"))
+            return
+        }
+
+        repository.updateSavedPlace(
+            uid = uid,
+            place = place,
+            onSuccess = onSuccess,
+            onFailure = onFailure
+        )
+    }
+
+    fun deleteSavedPlace(
+        placeId: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (uid == null) {
+            onFailure(Exception("User not logged in"))
+            return
+        }
+
+        repository.deleteSavedPlace(
+            uid = uid,
+            placeId = placeId,
+            onSuccess = onSuccess,
+            onFailure = onFailure
+        )
+    }
 }
