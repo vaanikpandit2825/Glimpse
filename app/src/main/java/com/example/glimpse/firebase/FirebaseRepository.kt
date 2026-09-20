@@ -671,7 +671,7 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
-    fun SavedPlace(
+    fun savePlace(
         uid:String,
         place:SavedPlace,
         onSuccess: () -> Unit,
