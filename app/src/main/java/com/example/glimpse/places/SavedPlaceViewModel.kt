@@ -1,4 +1,4 @@
-package com.example.glimpse.place
+package com.example.glimpse.places
 
 import androidx.lifecycle.ViewModel
 import com.example.glimpse.firebase.FirebaseRepository
