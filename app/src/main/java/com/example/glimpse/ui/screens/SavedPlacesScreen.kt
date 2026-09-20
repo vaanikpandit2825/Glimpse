@@ -1,7 +1,7 @@
 package com.example.glimpse.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,14 +22,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.glimpse.model.SavedPlace
+import com.example.glimpse.places.SavedPlaceViewModel
 
 private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseBlue = Color(0xFF0077BE)
@@ -39,8 +45,25 @@ private val GlimpseBackground = Color(0xFFFAFBFD)
 @Composable
 fun SavedPlacesScreen(
     onBack: () -> Unit = {},
-    onAddPlace: () -> Unit = {}
+    onAddPlace: () -> Unit = {},
+    viewModel: SavedPlaceViewModel = viewModel()
 ) {
+
+    var savedPlaces = remember {
+        mutableStateOf<List<SavedPlace>>(emptyList())
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.getSavedPlaces(
+            onResult = {
+                savedPlaces.value = it
+            },
+            onFailure = {
+                // Proper error handling will be added later
+            }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -105,6 +128,13 @@ fun SavedPlacesScreen(
                 modifier = Modifier.height(32.dp)
             )
 
+            /*
+             * Temporary display:
+             * The Firebase data is now being loaded into savedPlaces.
+             *
+             * We will replace this hardcoded row with the actual
+             * savedPlaces list in the next step.
+             */
             SavedPlaceRow(
                 icon = Icons.Rounded.Home,
                 name = "Home",
