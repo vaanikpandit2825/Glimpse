@@ -44,6 +44,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import com.example.glimpse.places.PlaceSearchRepository
+import com.example.glimpse.places.PlaceSearchResult
+import kotlinx.coroutines.delay
 
 private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseBlue = Color(0xFF0077BE)
@@ -62,19 +68,55 @@ fun AddPlaceScreen(
     onBack: () -> Unit = {},
     onUseCurrentLocation: () -> Unit = {},
     onPickOnMap: () -> Unit = {},
-    onPlaceSelected: (PlaceSearchItem) -> Unit = {}
+    onPlaceSelected: (PlaceSearchResult) -> Unit = {}
 ) {
     var searchQuery by remember {
         mutableStateOf("")
     }
 
-    /*
-     * Search results will be connected to the real
-     * place-search service later.
-     *
-     * Keep this empty for now.
-     */
-    val searchResults = emptyList<PlaceSearchItem>()
+    var searchResults by remember {
+        mutableStateOf<List<PlaceSearchResult>>(emptyList())
+    }
+
+    var isSearching by remember {
+        mutableStateOf(false)
+    }
+
+    var searchError by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val searchRepository = remember {
+        PlaceSearchRepository()
+    }
+
+    LaunchedEffect(searchQuery) {
+
+        if (searchQuery.trim().length < 2) {
+            searchResults = emptyList()
+            isSearching = false
+            searchError = null
+            return@LaunchedEffect
+        }
+
+        delay(400)
+
+        isSearching = true
+        searchError = null
+
+        searchRepository.searchPlaces(
+            query = searchQuery,
+            onResult = { results ->
+                searchResults = results
+                isSearching = false
+            },
+            onFailure = { exception ->
+                searchResults = emptyList()
+                isSearching = false
+                searchError = exception.message
+            }
+        )
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -205,38 +247,87 @@ fun AddPlaceScreen(
             Spacer(modifier = Modifier.height(26.dp))
 
             // Search results
-            if (searchResults.isNotEmpty()) {
 
-                Text(
-                    text = if (searchQuery.isBlank()) {
-                        "Recent places"
-                    } else {
-                        "Matched locations"
-                    },
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GlimpseTextGray
-                )
+            if (isSearching) {
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
                 ) {
-                    items(searchResults) { place ->
-                        SearchResultItem(
-                            place = place,
-                            onClick = {
-                                onPlaceSelected(place)
-                            }
-                        )
+                    Text(
+                        text = "Searching...",
+                        fontSize = 14.sp,
+                        color = GlimpseTextGray
+                    )
+                }
+
+            } else if (searchError != null) {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Couldn't search for places",
+                        fontSize = 14.sp,
+                        color = GlimpseTextGray
+                    )
+                }
+
+            } else if (searchResults.isNotEmpty()) {
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+
+                    Text(
+                        text = "Matched locations",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlimpseTextGray
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        items(searchResults) { place ->
+
+                            SearchResultItem(
+                                place = place,
+                                onClick = {
+                                    onPlaceSelected(place)
+                                }
+                            )
+                        }
                     }
+                }
+
+            } else if (searchQuery.trim().length >= 2) {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No places found",
+                        fontSize = 14.sp,
+                        color = GlimpseTextGray
+                    )
                 }
 
             } else {
 
-                // Empty / future search state
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -338,7 +429,7 @@ private fun QuickAction(
 
 @Composable
 private fun SearchResultItem(
-    place: PlaceSearchItem,
+    place: PlaceSearchResult,
     onClick: () -> Unit
 ) {
     Row(
