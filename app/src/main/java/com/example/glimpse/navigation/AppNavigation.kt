@@ -22,6 +22,7 @@ import com.example.glimpse.ui.screens.SharingPermissionsScreen
 import com.example.glimpse.ui.screens.SendConnectionPermissionsScreen
 import com.example.glimpse.ui.screens.ConnectionsScreen
 import com.example.glimpse.ui.screens.SavedPlacesScreen
+import com.example.glimpse.ui.screens.AddPlaceScreen
 
 @Composable
 fun AppNavigation(){
@@ -164,7 +165,14 @@ fun AppNavigation(){
                     navController.popBackStack()
                 },
                 onAddPlace = {
-
+                    navController.navigate("addPlace")
+                }
+            )
+        }
+        composable(route="addPlace"){
+            AddPlaceScreen(
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
