@@ -21,6 +21,7 @@ import com.example.glimpse.ui.screens.ReviewSharingScreen
 import com.example.glimpse.ui.screens.SharingPermissionsScreen
 import com.example.glimpse.ui.screens.SendConnectionPermissionsScreen
 import com.example.glimpse.ui.screens.ConnectionsScreen
+import com.example.glimpse.ui.screens.SavedPlacesScreen
 
 @Composable
 fun AppNavigation(){
@@ -35,7 +36,7 @@ fun AppNavigation(){
     }
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "savedPlaces"
     )
     {
         composable("signup"){
@@ -149,8 +150,23 @@ fun AppNavigation(){
                 )
             }
         }
-        composable("connections"){
+        composable(route= "connections"){
             ConnectionsScreen(navController)
+        }
+
+        composable(route = "connections") {
+            ConnectionsScreen(navController)
+        }
+
+        composable(route = "savedPlaces") {
+            SavedPlacesScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onAddPlace = {
+
+                }
+            )
         }
     }
 }
