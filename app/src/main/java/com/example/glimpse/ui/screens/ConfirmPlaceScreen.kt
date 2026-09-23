@@ -189,6 +189,140 @@ fun ConfirmPlaceScreen(
                     tint = GlimpseNavy
                 )
             }
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding(),
+                shape = RoundedCornerShape(
+                    topStart = 28.dp,
+                    topEnd = 28.dp
+                ),
+                color = GlimpseBackground,
+                shadowElevation = 12.dp
+            ) {
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 20.dp,
+                            vertical = 18.dp
+                        )
+                ) {
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .width(38.dp)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Color(0xFFD2D9DE)
+                            )
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(18.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(GlimpseBlueLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+
+                            Icon(
+                                imageVector = Icons.Outlined.LocationOn,
+                                contentDescription = null,
+                                tint = GlimpseBlue,
+                                modifier = Modifier.size(25.dp)
+                            )
+                        }
+
+                        Spacer(
+                            modifier = Modifier.width(14.dp)
+                        )
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+
+                            Text(
+                                text = place.name,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = GlimpseNavy
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(3.dp)
+                            )
+
+                            Text(
+                                text = place.address,
+                                fontSize = 12.sp,
+                                color = GlimpseTextGray
+                            )
+                        }
+                    }
+
+                    Spacer(
+                        modifier = Modifier.height(18.dp)
+                    )
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                onUseLocation(place)
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        color = GlimpseBlue
+                    ) {
+
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+
+                            Text(
+                                text = "Use this location  →",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
+
+                    Text(
+                        text = "Adjust pin position",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onAdjustPin()
+                            }
+                            .padding(vertical = 8.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = GlimpseBlue
+                    )
+                }
+            }
         }
     }
 }
