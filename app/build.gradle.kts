@@ -11,6 +11,8 @@ android {
     }
 
     val maptilerApiKey = localProperties.getProperty("MAPTILER_API_KEY") ?: "NOT_FOUND"
+    val googlePlacesApiKey =
+        localProperties.getProperty("GOOGLE_PLACES_API_KEY") ?: "NOT_FOUND"
 
 
     namespace = "com.example.glimpse"
@@ -27,6 +29,11 @@ android {
             "String",
             "MAPTILER_API_KEY",
             "\"$maptilerApiKey\""
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_PLACES_API_KEY",
+            "\"$googlePlacesApiKey\""
         )
     }
 
@@ -61,7 +68,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-
+    implementation(libs.places)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation("com.cloudinary:cloudinary-android:3.1.2")
