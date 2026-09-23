@@ -11,6 +11,7 @@ import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.ProfileScreen
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.mutableStateOf
 import com.example.glimpse.model.SharingPermissions
 import com.example.glimpse.ui.screens.AddPersonScreen
 import com.example.glimpse.ui.screens.GlimpseCodeScreen
@@ -23,10 +24,19 @@ import com.example.glimpse.ui.screens.SendConnectionPermissionsScreen
 import com.example.glimpse.ui.screens.ConnectionsScreen
 import com.example.glimpse.ui.screens.SavedPlacesScreen
 import com.example.glimpse.ui.screens.AddPlaceScreen
+import com.example.glimpse.ui.screens.ConfirmPlaceScreen
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.glimpse.places.PlaceSearchResult
 
 @Composable
 fun AppNavigation(){
     val navController= rememberNavController()
+    var selectedPlace by remember{
+        mutableStateOf<PlaceSearchResult?>(null)
+    }
     val user = FirebaseAuth.getInstance().currentUser
 
     val startDestination = if(user!=null){
@@ -173,8 +183,24 @@ fun AppNavigation(){
             AddPlaceScreen(
                 onBack = {
                     navController.popBackStack()
+                },
+                onPlaceSelected = { place->
+                    selectedPlace=place
+                    navController.navigate("confirmPlace")
                 }
             )
+        }
+        composable("confirmPlace"){
+            val place=selectedPlace
+
+            if(place!=null){
+                ConfirmPlaceScreen(
+                    place=place,
+                    onBack={
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }
