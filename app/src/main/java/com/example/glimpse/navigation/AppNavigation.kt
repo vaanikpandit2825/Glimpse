@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.glimpse.places.PlaceSearchResult
+import com.example.glimpse.ui.screens.PlaceDetailsScreen
 
 @Composable
 fun AppNavigation(){
@@ -197,6 +198,20 @@ fun AppNavigation(){
                 ConfirmPlaceScreen(
                     place=place,
                     onBack={
+                        navController.popBackStack()
+                    },
+                    onUseLocation = {
+                        navController.navigate("placeDetails")
+                    }
+                )
+            }
+        }
+        composable("placeDetails"){
+            val place=selectedPlace
+            if(place!=null){
+                PlaceDetailsScreen(
+                    place=place,
+                    onBack = {
                         navController.popBackStack()
                     }
                 )
