@@ -1,5 +1,6 @@
 package com.example.glimpse.ui.screens
 
+import android.graphics.Camera
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.glimpse.BuildConfig
 import com.example.glimpse.places.PlaceSearchResult
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
@@ -62,5 +64,99 @@ fun ConfirmPlaceScreen(
     onUseLocation: (PlaceSearchResult)->Unit={},
     onAdjustPin:()->Unit={}
 ){
+    val scope= rememberCoroutineScope()
+    val cameraState=rememberCameraState()
+    val placeSource=rememberGeoJsonSource(
+        data= GeoJsonData.Features(
+            Point(
+                Position(
+                    longitude = place.longitude,
+                    latitude = place.latitude
+                )
+            )
+        )
+    )
+    LaunchedEffect(place) {
+        cameraState.animateTo(
+            CameraPosition(
+                target = Position(
+                    longitude = place.longitude,
+                    latitude = place.latitude
+                ),
+                zoom=15.5
+            )
+        )
+    }
+    Box(
+        modifier=Modifier.fillMaxSize()
+    ){
+        MaplibreMap(
+            modifier = Modifier.fillMaxSize(),
+            baseStyle = BaseStyle.Uri(
+                "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+            ),
+            cameraState = cameraState
+        ){
+            CircleLayer(
+                id="selected-place",
+                source=placeSource,
+                color=const(GlimpseBlue)
+            )
+        }
+        Surface(
+            modifier=Modifier
+                .padding(
+                    start=16.dp,
+                    end=16.dp,
+                    top=18.dp
+                )
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color= Color.White.copy(alpha = 0.96f),
+            shadowElevation = 4.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 6.dp,
+                        vertical = 4.dp
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
 
+                IconButton(
+                    onClick = onBack
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowBack,
+                        contentDescription = "Back",
+                        tint = GlimpseNavy
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.width(4.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        text = "Confirm location",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlimpseNavy
+                    )
+
+                    Text(
+                        text = "Make sure this is the right place",
+                        fontSize = 11.sp,
+                        color = GlimpseTextGray
+                    )
+                }
+            }
+        }
+    }
 }
