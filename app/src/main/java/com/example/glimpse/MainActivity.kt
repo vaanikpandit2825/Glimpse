@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import com.example.glimpse.cloudinary.CloudinaryConfig
 import com.example.glimpse.navigation.AppNavigation
 import com.example.glimpse.ui.theme.GlimpseTheme
+import com.google.android.libraries.places.api.Places
 
 class MainActivity : ComponentActivity() {
 
@@ -18,6 +19,12 @@ class MainActivity : ComponentActivity() {
             GlimpseTheme {
                 AppNavigation()
             }
+        }
+        if (!Places.isInitialized()) {
+            Places.initializeWithNewPlacesApiEnabled(
+                applicationContext,
+                BuildConfig.GOOGLE_PLACES_API_KEY
+            )
         }
     }
 }
