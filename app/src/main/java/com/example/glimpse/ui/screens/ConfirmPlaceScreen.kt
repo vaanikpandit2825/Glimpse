@@ -158,5 +158,37 @@ fun ConfirmPlaceScreen(
                 }
             }
         }
+        Surface(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp),
+            shape = CircleShape,
+            color = Color.White,
+            shadowElevation = 5.dp
+        ) {
+
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        cameraState.animateTo(
+                            CameraPosition(
+                                target = Position(
+                                    longitude = place.longitude,
+                                    latitude = place.latitude
+                                ),
+                                zoom = 16.0
+                            )
+                        )
+                    }
+                }
+            ) {
+
+                Icon(
+                    imageVector = Icons.Outlined.GpsFixed,
+                    contentDescription = "Center location",
+                    tint = GlimpseNavy
+                )
+            }
+        }
     }
 }
