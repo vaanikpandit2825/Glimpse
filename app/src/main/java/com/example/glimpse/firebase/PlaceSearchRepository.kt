@@ -21,6 +21,8 @@ class PlaceSearchRepository {
 
     fun searchPlaces(
         query: String,
+        latitude: Double? = null,
+        longitude: Double? = null,
         onResult: (List<PlaceSearchResult>) -> Unit,
         onFailure: (Exception) -> Unit
     ) {
@@ -36,11 +38,20 @@ class PlaceSearchRepository {
                     "UTF-8"
                 )
 
+                val proximity = if (latitude != null && longitude != null) {
+                    "&proximity=$longitude,$latitude"
+                } else {
+                    ""
+                }
+
                 val url = URL(
                     "https://api.maptiler.com/geocoding/" +
                             "$encodedQuery.json" +
                             "?autocomplete=true" +
-                            "&limit=6" +
+                            "&limit=10" +
+                            "&fuzzyMatch=true" +
+                            "&types=poi,address,place" +
+                            proximity +
                             "&key=${BuildConfig.MAPTILER_API_KEY}"
                 )
 
