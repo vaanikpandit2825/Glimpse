@@ -47,9 +47,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.glimpse.Location.RequestLocationPermission
+import androidx.compose.ui.platform.LocalContext
 import com.example.glimpse.places.PlaceSearchRepository
 import com.example.glimpse.places.PlaceSearchResult
 import kotlinx.coroutines.delay
+import com.example.glimpse.Location.LocationRepository
+import androidx.compose.ui.platform.LocalContext
 
 private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseBlue = Color(0xFF0077BE)
@@ -86,9 +90,31 @@ fun AddPlaceScreen(
         mutableStateOf<String?>(null)
     }
 
+    var currentLatitude by remember {
+        mutableStateOf<Double?>(null)
+    }
+
+    var currentLongtitude by remember{
+        mutableStateOf<Double?>(null)
+    }
+
     val searchRepository = remember {
         PlaceSearchRepository()
     }
+
+    val context= LocalContext.current
+    val locationRepository=remember{
+        LocationRepository(context)
+    }
+
+    RequestLocationPermission(
+        onPermissionGranted = {
+            locationRepository.getCurrentLocation { location ->
+                currentLatitude = location?.latitude
+                currentLongtitude = location?.longitude
+            }
+        }
+    )
 
     LaunchedEffect(searchQuery) {
 
@@ -106,6 +132,8 @@ fun AddPlaceScreen(
 
         searchRepository.searchPlaces(
             query = searchQuery,
+            latitude = currentLatitude,
+            longitude = currentLongtitude,
             onResult = { results ->
                 searchResults = results
                 isSearching = false
