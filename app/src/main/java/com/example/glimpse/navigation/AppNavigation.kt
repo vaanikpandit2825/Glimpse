@@ -30,11 +30,37 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.glimpse.places.PlaceSearchResult
+import com.example.glimpse.ui.screens.PickPlaceOnMapScreen
 import com.example.glimpse.ui.screens.PlaceDetailsScreen
+import androidx.compose.ui.platform.LocalContext
+import com.example.glimpse.Location.LocationRepository
+import com.example.glimpse.Location.RequestLocationPermission
 
 @Composable
 fun AppNavigation(){
     val navController= rememberNavController()
+    val context = LocalContext.current
+
+    var currentLatitude by remember {
+        mutableStateOf<Double?>(null)
+    }
+
+    var currentLongtitude by remember {
+        mutableStateOf<Double?>(null)
+    }
+
+    val locationRepository = remember {
+        LocationRepository(context)
+    }
+
+    RequestLocationPermission(
+        onPermissionGranted = {
+            locationRepository.getCurrentLocation { location ->
+                currentLatitude = location?.latitude
+                currentLongtitude = location?.longitude
+            }
+        }
+    )
     var selectedPlace by remember{
         mutableStateOf<PlaceSearchResult?>(null)
     }
@@ -180,14 +206,26 @@ fun AppNavigation(){
                 }
             )
         }
-        composable(route="addPlace"){
+        composable("addPlace") {
             AddPlaceScreen(
                 onBack = {
                     navController.popBackStack()
                 },
-                onPlaceSelected = { place->
-                    selectedPlace=place
+                onPickOnMap = {
+                    navController.navigate("pickPlaceOnMap")
+                },
+                onPlaceSelected = { place ->
+                    selectedPlace = place
                     navController.navigate("confirmPlace")
+                }
+            )
+        }
+        composable("pickPlaceOnMap"){
+            PickPlaceOnMapScreen(
+                latitude=currentLatitude,
+                longitude=currentLongtitude,
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
