@@ -45,20 +45,20 @@ fun PickPlaceOnMapScreen(
     latitude: Double?,
     longitude: Double?,
     onBack: () -> Unit = {},
-    onLocationSelected: (latitude: Double, longitude: Double) -> Unit = { _, _ -> }
+    onLocationSelected: (latitude: Double, longtitude: Double) -> Unit = { _, _ -> }
 ) {
     val cameraState = rememberCameraState()
     var selectedLatitude by remember{
         mutableStateOf(latitude)
     }
-    var selectedLongitude by remember{
+    var selectedLongtitude by remember{
         mutableStateOf(longitude)
     }
     LaunchedEffect(cameraState) {
         snapshotFlow { cameraState.position }
             .collect { position ->
                 selectedLatitude = position.target.latitude
-                selectedLongitude = position.target.longitude
+                selectedLongtitude = position.target.longitude
             }
     }
 
