@@ -34,7 +34,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
-
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 
 private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseBlue = Color(0xFF0077BE)
@@ -47,10 +48,10 @@ fun PickPlaceOnMapScreen(
     onLocationSelected: (latitude: Double, longitude: Double) -> Unit = { _, _ -> }
 ) {
     val cameraState = rememberCameraState()
-    val selectedLatitude by remember{
+    var selectedLatitude by remember{
         mutableStateOf(latitude)
     }
-    val selectedLongtitude by remember{
+    var selectedLongitude by remember{
         mutableStateOf(longitude)
     }
     LaunchedEffect(cameraState) {
