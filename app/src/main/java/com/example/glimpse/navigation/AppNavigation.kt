@@ -76,6 +76,10 @@ fun AppNavigation(){
     var selectedLongtitude by remember {
         mutableStateOf<Double?>(null)
     }
+
+    var editingPlace by remember{
+        mutableStateOf<SavedPlace?>(null)
+    }
     val user = FirebaseAuth.getInstance().currentUser
 
     val startDestination = if(user!=null){
@@ -214,7 +218,21 @@ fun AppNavigation(){
                     navController.popBackStack()
                 },
                 onAddPlace = {
+                    editingPlace = null
                     navController.navigate("addPlace")
+                },
+                onEditPlace = { place ->
+                    editingPlace = place
+
+                    selectedPlace = PlaceSearchResult(
+                        id = place.id,
+                        name = place.name,
+                        address = "Saved place",
+                        latitude = place.latitude,
+                        longitude = place.longtitude
+                    )
+
+                    navController.navigate("placeDetails")
                 }
             )
         }
@@ -274,38 +292,67 @@ fun AppNavigation(){
         }
         composable("placeDetails") {
             val place = selectedPlace
+            val existingPlace = editingPlace
 
             if (place != null) {
                 PlaceDetailsScreen(
                     place = place,
+                    existingPlace = existingPlace,
                     onBack = {
                         navController.popBackStack()
                     },
                     onSave = { name, type, radius ->
 
-                        val savedPlace = SavedPlace(
-                            id = java.util.UUID.randomUUID().toString(),
-                            name = name,
-                            type = type,
-                            latitude = place.latitude,
-                            longtitude = place.longitude,
-                            radius = radius,
-                            createdAt = System.currentTimeMillis()
-                        )
+                        if (existingPlace != null) {
 
-                        savedPlaceViewModel.savePlace(
-                            place = savedPlace,
-                            onSuccess = {
-                                navController.navigate("savedPlaces") {
-                                    popUpTo("addPlace") {
-                                        inclusive = true
+                            val updatedPlace = existingPlace.copy(
+                                name = name,
+                                type = type,
+                                radius = radius
+                            )
+
+                            savedPlaceViewModel.updateSavedPlace(
+                                place = updatedPlace,
+                                onSuccess = {
+                                    editingPlace = null
+
+                                    navController.navigate("savedPlaces") {
+                                        popUpTo("placeDetails") {
+                                            inclusive = true
+                                        }
                                     }
+                                },
+                                onFailure = {
+                                    // We'll add proper error handling later.
                                 }
-                            },
-                            onFailure = {
-                                // We'll handle the error UI properly afterward.
-                            }
-                        )
+                            )
+
+                        } else {
+
+                            val savedPlace = SavedPlace(
+                                id = java.util.UUID.randomUUID().toString(),
+                                name = name,
+                                type = type,
+                                latitude = place.latitude,
+                                longtitude = place.longitude,
+                                radius = radius,
+                                createdAt = System.currentTimeMillis()
+                            )
+
+                            savedPlaceViewModel.savePlace(
+                                place = savedPlace,
+                                onSuccess = {
+                                    navController.navigate("savedPlaces") {
+                                        popUpTo("addPlace") {
+                                            inclusive = true
+                                        }
+                                    }
+                                },
+                                onFailure = {
+
+                                }
+                            )
+                        }
                     }
                 )
             }
