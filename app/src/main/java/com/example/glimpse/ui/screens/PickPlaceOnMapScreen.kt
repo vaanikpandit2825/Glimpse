@@ -35,7 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 
 private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseBlue = Color(0xFF0077BE)
@@ -166,19 +169,24 @@ fun PickPlaceOnMapScreen(
             color = Color.White,
             shadowElevation = 8.dp
         ) {
-            Text(
-                text = if (latitude != null && longitude != null) {
-                    "Move the map to choose a location"
-                } else {
-                    "Getting your location..."
+            Button(
+                onClick = {
+                    if (selectedLatitude != null && selectedLongtitude != null) {
+                        onLocationSelected(
+                            selectedLatitude!!,
+                            selectedLongtitude!!
+                        )
+                    }
                 },
-                modifier = Modifier.padding(
-                    horizontal = 20.dp,
-                    vertical = 14.dp
-                ),
-                color = GlimpseNavy,
-                fontSize = 13.sp
-            )
+                enabled = selectedLatitude != null && selectedLongtitude != null,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Use this location"
+                )
+            }
         }
     }
 }
