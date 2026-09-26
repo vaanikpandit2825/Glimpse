@@ -266,8 +266,8 @@ fun AppNavigation(){
         }
         composable("pickPlaceOnMap"){
             PickPlaceOnMapScreen(
-                latitude = currentLatitude,
-                longitude = currentLongtitude,
+                latitude = selectedPlace?.latitude?:currentLatitude,
+                longitude = selectedPlace?.longitude?:currentLongtitude,
                 onBack = {
                     navController.popBackStack()
                 },
@@ -276,10 +276,12 @@ fun AppNavigation(){
                     selectedLatitude = latitude
                     selectedLongtitude = longtitude
 
+                    val currentPlace = selectedPlace
+
                     selectedPlace = PlaceSearchResult(
-                        id = "picked_${System.currentTimeMillis()}",
-                        name = "Selected location",
-                        address = "Location picked on map",
+                        id = currentPlace?.id ?: "picked_${System.currentTimeMillis()}",
+                        name = currentPlace?.name ?: "Selected location",
+                        address = currentPlace?.address ?: "Location picked on map",
                         latitude = latitude,
                         longitude = longtitude
                     )
