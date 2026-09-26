@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.glimpse.places.PlaceSearchResult
 import kotlin.math.roundToInt
+import com.example.glimpse.model.SavedPlace
 
 private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseBlue = Color(0xFF0077BE)
@@ -58,6 +59,7 @@ private val GlimpseBorder = Color(0xFFE6EDF1)
 @Composable
 fun PlaceDetailsScreen(
     place: PlaceSearchResult,
+    existingPlace: SavedPlace? = null,
     onBack: () -> Unit = {},
     onSave: (
         name: String,
@@ -67,15 +69,15 @@ fun PlaceDetailsScreen(
 ) {
 
     var placeName by remember {
-        mutableStateOf(place.name)
+        mutableStateOf(existingPlace?.name ?:place.name)
     }
 
     var selectedType by remember {
-        mutableStateOf("Custom")
+        mutableStateOf(existingPlace?.type?:"Custom")
     }
 
     var radius by remember {
-        mutableFloatStateOf(200f)
+        mutableFloatStateOf(existingPlace?.radius?.toFloat()?:200f)
     }
 
     Column(
@@ -393,7 +395,7 @@ fun PlaceDetailsScreen(
                 )
 
                 Text(
-                    text = "Save place",
+                    text = if(existingPlace==null)"Save Place" else "Update Place",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
