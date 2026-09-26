@@ -35,7 +35,9 @@ import com.example.glimpse.ui.screens.PlaceDetailsScreen
 import androidx.compose.ui.platform.LocalContext
 import com.example.glimpse.Location.LocationRepository
 import com.example.glimpse.Location.RequestLocationPermission
-
+import com.example.glimpse.places.SavedPlaceViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.glimpse.model.SavedPlace
 @Composable
 fun AppNavigation(){
     val navController= rememberNavController()
@@ -53,6 +55,8 @@ fun AppNavigation(){
         LocationRepository(context)
     }
 
+    val savedPlaceViewModel: SavedPlaceViewModel = viewModel()
+
     RequestLocationPermission(
         onPermissionGranted = {
             locationRepository.getCurrentLocation { location ->
@@ -63,6 +67,14 @@ fun AppNavigation(){
     )
     var selectedPlace by remember{
         mutableStateOf<PlaceSearchResult?>(null)
+    }
+
+    var selectedLatitude by remember {
+        mutableStateOf<Double?>(null)
+    }
+
+    var selectedLongtitude by remember {
+        mutableStateOf<Double?>(null)
     }
     val user = FirebaseAuth.getInstance().currentUser
 
@@ -222,10 +234,25 @@ fun AppNavigation(){
         }
         composable("pickPlaceOnMap"){
             PickPlaceOnMapScreen(
-                latitude=currentLatitude,
-                longitude=currentLongtitude,
+                latitude = currentLatitude,
+                longitude = currentLongtitude,
                 onBack = {
                     navController.popBackStack()
+                },
+                onLocationSelected = { latitude, longtitude ->
+
+                    selectedLatitude = latitude
+                    selectedLongtitude = longtitude
+
+                    selectedPlace = PlaceSearchResult(
+                        id = "picked_${System.currentTimeMillis()}",
+                        name = "Selected location",
+                        address = "Location picked on map",
+                        latitude = latitude,
+                        longitude = longtitude
+                    )
+
+                    navController.navigate("confirmPlace")
                 }
             )
         }
@@ -238,19 +265,47 @@ fun AppNavigation(){
                     onBack={
                         navController.popBackStack()
                     },
-                    onUseLocation = {
+                    onUseLocation = {confirmedPlace->
+                        selectedPlace=confirmedPlace
                         navController.navigate("placeDetails")
                     }
                 )
             }
         }
-        composable("placeDetails"){
-            val place=selectedPlace
-            if(place!=null){
+        composable("placeDetails") {
+            val place = selectedPlace
+
+            if (place != null) {
                 PlaceDetailsScreen(
-                    place=place,
+                    place = place,
                     onBack = {
                         navController.popBackStack()
+                    },
+                    onSave = { name, type, radius ->
+
+                        val savedPlace = SavedPlace(
+                            id = java.util.UUID.randomUUID().toString(),
+                            name = name,
+                            type = type,
+                            latitude = place.latitude,
+                            longtitude = place.longitude,
+                            radius = radius,
+                            createdAt = System.currentTimeMillis()
+                        )
+
+                        savedPlaceViewModel.savePlace(
+                            place = savedPlace,
+                            onSuccess = {
+                                navController.navigate("savedPlaces") {
+                                    popUpTo("addPlace") {
+                                        inclusive = true
+                                    }
+                                }
+                            },
+                            onFailure = {
+                                // We'll handle the error UI properly afterward.
+                            }
+                        )
                     }
                 )
             }
