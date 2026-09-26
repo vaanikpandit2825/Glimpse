@@ -241,6 +241,20 @@ fun AppNavigation(){
                 onBack = {
                     navController.popBackStack()
                 },
+                onUseCurrentLocation = {
+                    if (currentLatitude != null && currentLongtitude != null) {
+
+                        selectedPlace = PlaceSearchResult(
+                            id = "current_${System.currentTimeMillis()}",
+                            name = "Current location",
+                            address = "Your current location",
+                            latitude = currentLatitude!!,
+                            longitude = currentLongtitude!!
+                        )
+
+                        navController.navigate("confirmPlace")
+                    }
+                },
                 onPickOnMap = {
                     navController.navigate("pickPlaceOnMap")
                 },
@@ -286,6 +300,9 @@ fun AppNavigation(){
                     onUseLocation = {confirmedPlace->
                         selectedPlace=confirmedPlace
                         navController.navigate("placeDetails")
+                    },
+                    onAdjustPin={
+                        navController.navigate("pickPlaceOnMap")
                     }
                 )
             }
@@ -323,7 +340,7 @@ fun AppNavigation(){
                                     }
                                 },
                                 onFailure = {
-                                    // We'll add proper error handling later.
+
                                 }
                             )
 
