@@ -1,6 +1,7 @@
 package com.example.glimpse.firebase
 
 import android.util.Log
+import androidx.compose.ui.tooling.data.Group
 import com.example.glimpse.model.UserLocation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -9,8 +10,10 @@ import com.google.firebase.database.MutableData
 import com.google.firebase.database.Transaction
 import com.google.firebase.database.FirebaseDatabase
 import com.example.glimpse.model.ConnectionRequest
+import com.example.glimpse.model.GlimpseGroup
 import com.example.glimpse.model.SharingPermissions
 import com.example.glimpse.model.SavedPlace
+
 
 class FirebaseRepository {
 
@@ -22,6 +25,8 @@ class FirebaseRepository {
     private val glimpseIdsRef = database.getReference("glimpseIds")
     private val connectionRequestsRef = database.getReference("connectionRequests")
     private val savedPlacesRef=database.getReference("SavedPlaces")
+
+    private val groupsRef=database.getReference("groups")
 
     fun updateLocation(
         uid: String,
@@ -741,4 +746,62 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
+
+    fun createGroup(
+        group: GlimpseGroup,
+        onSuccess: () -> Unit,
+        onFailure:(Exception)->Unit
+    ){
+        groupsRef.child(group.id)
+            .setValue(group)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+
+    fun getGroup(
+        uid: String,
+        onSuccess: (List<GlimpseGroup>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ){
+        groupsRef.get()
+            .addOnSuccessListener { snapshot ->
+
+                val groups = snapshot.children.mapNotNull { child ->
+                    val group = child.getValue(GlimpseGroup::class.java)
+
+                    if (group != null && group.members.containsKey(uid)) {
+                        group
+                    } else {
+                        null
+                    }
+                }
+
+                onSuccess(groups)
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+    fun addMembersToGroup(
+        groupId:String,
+        uid:String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ){
+        groupsRef.child(groupId)
+            .child("members")
+            .child(uid)
+            .setValue(true)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+
 }
