@@ -13,6 +13,7 @@ import com.example.glimpse.model.ConnectionRequest
 import com.example.glimpse.model.GlimpseGroup
 import com.example.glimpse.model.SharingPermissions
 import com.example.glimpse.model.SavedPlace
+import com.example.glimpse.model.GroupMember
 
 
 class FirebaseRepository {
@@ -833,5 +834,48 @@ class FirebaseRepository {
             .addOnFailureListener {
                 onFailure(it)
             }
+    }
+    fun getGroupMembers(
+        memberIds: List<String>,
+        onSuccess: (List<GroupMember>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        if (memberIds.isEmpty()) {
+            onSuccess(emptyList())
+            return
+        }
+
+        val members = mutableListOf<GroupMember>()
+        var completed = 0
+
+        memberIds.forEach { uid ->
+            profilesRef.child(uid)
+                .get()
+                .addOnSuccessListener { snapshot ->
+
+                    val name = snapshot.child("name")
+                        .getValue(String::class.java) ?: ""
+
+                    val profilePhotoUrl = snapshot.child("profilePhotoUrl")
+                        .getValue(String::class.java) ?: ""
+
+                    members.add(
+                        GroupMember(
+                            uid = uid,
+                            name = name,
+                            profilePhotoUrl = profilePhotoUrl
+                        )
+                    )
+
+                    completed++
+
+                    if (completed == memberIds.size) {
+                        onSuccess(members)
+                    }
+                }
+                .addOnFailureListener {
+                    onFailure(it)
+                }
+        }
     }
 }
