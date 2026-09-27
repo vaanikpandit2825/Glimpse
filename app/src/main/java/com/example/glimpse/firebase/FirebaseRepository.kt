@@ -820,4 +820,18 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
+    fun deleteGroup(
+        groupId:String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ){
+        groupsRef.child(groupId)
+            .removeValue()
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
 }
