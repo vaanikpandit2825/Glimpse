@@ -803,5 +803,21 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
-
+    fun removeMemberFromGroup(
+        groupId: String,
+        uid: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        groupsRef.child(groupId)
+            .child("members")
+            .child(uid)
+            .removeValue()
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
 }
