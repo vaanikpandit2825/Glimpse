@@ -38,6 +38,9 @@ import com.example.glimpse.Location.RequestLocationPermission
 import com.example.glimpse.places.SavedPlaceViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.glimpse.model.SavedPlace
+import com.example.glimpse.groups.GroupsViewModel
+import com.example.glimpse.ui.screens.CreateGroupScreen
+import com.example.glimpse.ui.screens.GroupsScreen
 @Composable
 fun AppNavigation(){
     val navController= rememberNavController()
@@ -56,6 +59,8 @@ fun AppNavigation(){
     }
 
     val savedPlaceViewModel: SavedPlaceViewModel = viewModel()
+
+    val groupsViewModel: GroupsViewModel=viewModel()
 
     RequestLocationPermission(
         onPermissionGranted = {
@@ -375,6 +380,35 @@ fun AppNavigation(){
                     }
                 )
             }
+        }
+        composable("groups") {
+            GroupsScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onCreateGroup = {
+                    navController.navigate("createGroup")
+                },
+                onGroupClick = { group ->
+                },
+                groupsViewModel = groupsViewModel
+            )
+        }
+
+        composable("createGroup") {
+            CreateGroupScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onGroupCreated = {
+                    navController.navigate("groups") {
+                        popUpTo("createGroup") {
+                            inclusive = true
+                        }
+                    }
+                },
+                groupsViewModel = groupsViewModel
+            )
         }
     }
 }
