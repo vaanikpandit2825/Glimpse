@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.CardTravel
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -44,12 +46,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.glimpse.model.GroupsViewModel
+import coil.compose.AsyncImage
+import com.example.glimpse.model.GroupMember
+import com.example.glimpse.groups.GroupsViewModel
 import com.example.glimpse.model.GlimpseGroup
 import com.google.firebase.auth.FirebaseAuth
 
@@ -79,6 +84,10 @@ fun GroupsScreen(
         mutableStateOf<String?>(null)
     }
 
+    var groupMembers by remember {
+        mutableStateOf<Map<String, List<GroupMember>>>(emptyMap())
+    }
+
     LaunchedEffect(currentUser?.uid) {
         val uid = currentUser?.uid
 
@@ -94,6 +103,20 @@ fun GroupsScreen(
                 groupList = loadedGroups
                 isLoading = false
                 errorMessage = null
+
+                loadedGroups.forEach { group ->
+                    val memberIds = group.members.keys.toList()
+
+                    groupsViewModel.getGroupMembers(
+                        memberIds = memberIds,
+                        onSuccess = { members ->
+                            groupMembers = groupMembers + (group.id to members)
+                        },
+                        onFailure = {
+                            groupMembers = groupMembers + (group.id to emptyList())
+                        }
+                    )
+                }
             },
             onFailure = { exception ->
                 errorMessage =
@@ -176,7 +199,7 @@ fun GroupsScreen(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            contentPadding = PaddingValues(
                                 bottom = 100.dp
                             )
                         ) {
@@ -186,6 +209,7 @@ fun GroupsScreen(
                             ) { group ->
                                 GroupCard(
                                     group = group,
+                                    members = groupMembers[group.id] ?: emptyList(),
                                     onClick = {
                                         onGroupClick(group)
                                     }
@@ -302,6 +326,7 @@ private fun GroupsTopBar(
 @Composable
 private fun GroupCard(
     group: GlimpseGroup,
+    members: List<GroupMember>,
     onClick: () -> Unit
 ) {
     val groupIcon = when (group.type.lowercase()) {
@@ -393,8 +418,9 @@ private fun GroupCard(
                     modifier = Modifier.height(10.dp)
                 )
 
-                MemberCountPreview(
-                    count = memberCount
+                MemberAvatarPreview(
+                    members = members,
+                    totalCount = memberCount
                 )
             }
 
@@ -417,15 +443,16 @@ private fun GroupCard(
 }
 
 @Composable
-private fun MemberCountPreview(
-    count: Int
+private fun MemberAvatarPreview(
+    members: List<GroupMember>,
+    totalCount: Int
 ) {
+    val visibleMembers = members.take(4)
+
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val visibleCount = minOf(count, 4)
-
-        repeat(visibleCount) { index ->
+        visibleMembers.forEachIndexed { index, member ->
             Box(
                 modifier = Modifier
                     .padding(
@@ -433,23 +460,37 @@ private fun MemberCountPreview(
                     )
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(
-                        when (index) {
-                            0 -> Color(0xFF7A9CAF)
-                            1 -> Color(0xFFB78972)
-                            2 -> Color(0xFF78937C)
-                            else -> Color(0xFF8A7899)
-                        }
-                    )
                     .border(
                         width = 2.dp,
                         color = Color.White,
                         shape = CircleShape
                     )
-            )
+                    .background(Color(0xFFE8EDF0)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (member.profilePhotoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = member.profilePhotoUrl,
+                        contentDescription = member.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = member.name,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
 
-        if (count > 4) {
+        val remainingCount = totalCount - visibleMembers.size
+
+        if (remainingCount > 0) {
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
@@ -464,7 +505,7 @@ private fun MemberCountPreview(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "+${count - 4}",
+                    text = "+$remainingCount",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = GlimpseBlue
