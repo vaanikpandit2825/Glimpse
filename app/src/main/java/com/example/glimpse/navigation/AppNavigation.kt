@@ -41,6 +41,7 @@ import com.example.glimpse.model.SavedPlace
 import com.example.glimpse.groups.GroupsViewModel
 import com.example.glimpse.ui.screens.CreateGroupScreen
 import com.example.glimpse.ui.screens.GroupsScreen
+import com.example.glimpse.ui.screens.AddPeopleToGroupScreen
 @Composable
 fun AppNavigation(){
     val navController= rememberNavController()
@@ -397,9 +398,7 @@ fun AppNavigation(){
 
         composable("createGroup") {
             CreateGroupScreen(
-                onBack = {
-                    navController.popBackStack()
-                },
+                onBack = { navController.popBackStack() },
                 onGroupCreated = {
                     navController.navigate("groups") {
                         popUpTo("createGroup") {
@@ -410,5 +409,6 @@ fun AppNavigation(){
                 groupsViewModel = groupsViewModel
             )
         }
+
     }
 }
