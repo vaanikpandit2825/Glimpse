@@ -42,6 +42,7 @@ import com.example.glimpse.groups.GroupsViewModel
 import com.example.glimpse.ui.screens.CreateGroupScreen
 import com.example.glimpse.ui.screens.GroupsScreen
 import com.example.glimpse.ui.screens.AddPeopleToGroupScreen
+import com.example.glimpse.ui.screens.GroupDetailScreen
 @Composable
 fun AppNavigation(){
     val navController= rememberNavController()
@@ -391,8 +392,23 @@ fun AppNavigation(){
                     navController.navigate("createGroup")
                 },
                 onGroupClick = { group ->
+                    navController.navigate("groupDetail/${group.id}")
                 },
                 groupsViewModel = groupsViewModel
+            )
+        }
+
+        composable("groupDetail/{groupId}") { backStackEntry ->
+
+            val groupId =
+                backStackEntry.arguments?.getString("groupId")
+                    ?: return@composable
+
+            GroupDetailScreen(
+                groupId = groupId,
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -421,7 +437,7 @@ fun AppNavigation(){
                     navController.popBackStack()
                 },
                 onPeopleAdded = {
-                    navController.navigate("groups") {
+                    navController.navigate("groupDetail/$groupId") {
                         popUpTo("addPeopleToGroup/{groupId}") {
                             inclusive = true
                         }
