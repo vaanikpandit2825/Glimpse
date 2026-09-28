@@ -409,6 +409,25 @@ fun AppNavigation(){
                 groupsViewModel = groupsViewModel
             )
         }
+        composable("addPeopleToGroup/{groupId}") { backStackEntry ->
 
+            val groupId =
+                backStackEntry.arguments?.getString("groupId")
+                    ?: return@composable
+
+            AddPeopleToGroupScreen(
+                groupId = groupId,
+                onBack = {
+                    navController.popBackStack()
+                },
+                onPeopleAdded = {
+                    navController.navigate("groups") {
+                        popUpTo("addPeopleToGroup/{groupId}") {
+                            inclusive = true
+                        }
+                    }
+                }
+            )
+        }
     }
 }
