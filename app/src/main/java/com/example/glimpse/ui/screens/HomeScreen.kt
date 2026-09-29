@@ -1,6 +1,5 @@
 package com.example.glimpse.ui.screens
 
-import android.R
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,83 +45,42 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.glimpse.BuildConfig
 import com.example.glimpse.Location.LocationRepository
 import com.example.glimpse.Location.RequestLocationPermission
+import com.example.glimpse.connection.ConnectionRequestViewModel
 import com.example.glimpse.firebase.FirebaseRepository
+import com.example.glimpse.model.ConnectionRequest
 import com.example.glimpse.model.UserLocation
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
-import org.maplibre.compose.map.MaplibreMap
-import org.maplibre.compose.style.BaseStyle
-import org.maplibre.spatialk.geojson.Position
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import com.example.glimpse.connection.ConnectionRequestViewModel
-import com.example.glimpse.model.ConnectionRequest
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.glimpse.ui.theme.Surface
-import com.google.firebase.firestore.auth.User
-import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.expressions.dsl.const
-import org.maplibre.spatialk.geojson.FeatureCollection
-import org.maplibre.compose.sources.rememberGeoJsonSource
-import org.maplibre.compose.sources.GeoJsonData
-import org.maplibre.spatialk.geojson.Point
 import org.maplibre.compose.layers.CircleLayer
-import org.maplibre.compose.expressions.dsl.const
+import org.maplibre.compose.map.MaplibreMap
+import org.maplibre.compose.sources.GeoJsonData
+import org.maplibre.compose.sources.rememberGeoJsonSource
+import org.maplibre.compose.style.BaseStyle
+import org.maplibre.spatialk.geojson.Point
+import org.maplibre.spatialk.geojson.Position
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val GlimpseNavy = Color(0xFF14202B)
 private val GlimpseWhite = Color(0xFFFFFFFF)
 private val GlimpseSoftBlue = Color(0xFFEAF4FA)
 private val GlimpseSoftGray = Color(0xFFF5F7F8)
-private val GlimpseBorder = Color(0xFFE5EAED)
 private val GlimpseTextGray = Color(0xFF69757D)
-private val GlimpseGreen = Color(0xFF20B878)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,6 +97,7 @@ fun HomeScreen(
     val firebaseRepository = remember {
         FirebaseRepository()
     }
+
     val connectionViewModel: ConnectionRequestViewModel = viewModel()
 
     val cameraState = rememberCameraState()
@@ -151,7 +110,9 @@ fun HomeScreen(
         mutableStateOf(emptyList<UserLocation>())
     }
 
-    var connections=remember{mutableStateOf(emptyList<ConnectionRequest>())}
+    var connections = remember {
+        mutableStateOf(emptyList<ConnectionRequest>())
+    }
 
     val currentUser = FirebaseAuth.getInstance().currentUser
 
@@ -167,19 +128,25 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         firebaseRepository.getUsersLocations { locations ->
             userLocations = locations
+
             Log.d(
                 "GLIMPSE_LOCATION",
                 "Loaded ${locations.size} user locations"
             )
         }
     }
-    LaunchedEffect(Unit){
+
+    LaunchedEffect(Unit) {
         connectionViewModel.getConnections(
-            onResult={result->
-                connections.value=result
+            onResult = { result ->
+                connections.value = result
             },
-            onFailure={exception->
-                Log.e("GLIMPSE_CONNECTIONS", "Failed to load connections", exception)
+            onFailure = { exception ->
+                Log.e(
+                    "GLIMPSE_CONNECTIONS",
+                    "Failed to load connections",
+                    exception
+                )
             }
         )
     }
@@ -187,7 +154,10 @@ fun HomeScreen(
     fun moveToCurrentLocation() {
         locationRepository.getCurrentLocation { location ->
             if (location == null) {
-                Log.d("GLIMPSE_LOCATION", "Current location is null")
+                Log.d(
+                    "GLIMPSE_LOCATION",
+                    "Current location is null"
+                )
                 return@getCurrentLocation
             }
 
@@ -217,13 +187,16 @@ fun HomeScreen(
         sheetContent = {
             CircleSheet(
                 hasConnections = connections.value.isNotEmpty(),
-                connections=connections.value,
+                connections = connections.value,
                 userLocations = userLocations,
                 onAddPeople = {
                     navController.navigate("addperson")
                 },
                 onOpenConnections = {
                     navController.navigate("connections")
+                },
+                onOpenGroups = {
+                    navController.navigate("groups")
                 }
             )
         }
@@ -243,7 +216,6 @@ fun HomeScreen(
                 }
 
                 if (myLocation != null) {
-
                     val source = rememberGeoJsonSource(
                         data = GeoJsonData.Features(
                             Point(
@@ -408,8 +380,9 @@ private fun CircleSheet(
     hasConnections: Boolean,
     onAddPeople: () -> Unit,
     onOpenConnections: () -> Unit,
+    onOpenGroups: () -> Unit,
     userLocations: List<UserLocation>,
-    connections:List<ConnectionRequest>
+    connections: List<ConnectionRequest>
 ) {
     var selectedTab by remember {
         mutableStateOf(0)
@@ -465,7 +438,15 @@ private fun CircleSheet(
 
                 Text(
                     text = if (hasConnections) {
-                        "${if (selectedTab == 0) "People" else if (selectedTab == 1) "Places" else "Groups"} in your circle"
+                        "${
+                            if (selectedTab == 0) {
+                                "People"
+                            } else if (selectedTab == 1) {
+                                "Places"
+                            } else {
+                                "Groups"
+                            }
+                        } in your circle"
                     } else {
                         "People who matter. Closer."
                     },
@@ -515,12 +496,14 @@ private fun CircleSheet(
                 onAddPeople = onAddPeople,
                 onOpenConnections = onOpenConnections,
                 userLocations = userLocations,
-                connections=connections
+                connections = connections
             )
 
             1 -> PlacesContent()
 
-            2 -> GroupsContent()
+            2 -> GroupsContent(
+                onOpenGroups = onOpenGroups
+            )
         }
     }
 }
@@ -614,7 +597,7 @@ private fun PeopleContent(
     onAddPeople: () -> Unit,
     userLocations: List<UserLocation>,
     onOpenConnections: () -> Unit,
-    connections:List<ConnectionRequest>
+    connections: List<ConnectionRequest>
 ) {
     if (!hasConnections) {
         Surface(
@@ -681,27 +664,29 @@ private fun PeopleContent(
                 )
             }
         }
-    } else{
+    } else {
         Column(
-            modifier=Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         ) {
-            connections.forEach{ connection ->
-                val personLocation=userLocations.find {
-                    it.uid==connection.senderUid
+            connections.forEach { connection ->
+                val personLocation = userLocations.find {
+                    it.uid == connection.senderUid
                 }
 
-                val locationAvailable=connection.senderSharing.location && personLocation!=null
+                val locationAvailable =
+                    connection.senderSharing.location && personLocation != null
 
                 Row(
-                    modifier= Modifier
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .clickable{
+                        .clickable {
                             Log.d(
                                 "GLIMPSE_CONNECTION",
                                 "Selected ${connection.name} (${connection.senderUid})"
                             )
                         }
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (connection.profilePhotoUrl.isNotEmpty()) {
                         AsyncImage(
@@ -730,24 +715,29 @@ private fun PeopleContent(
                             }
                         }
                     }
+
                     Spacer(
-                        modifier=Modifier.width(13.dp)
+                        modifier = Modifier.width(13.dp)
                     )
-                    Text(
-                        text=connection.name,
-                        color=GlimpseNavy,
-                        fontSize=15.sp,
-                        fontWeight= FontWeight.SemiBold
-                    )
-                    Text(
-                        text=if(connection.senderSharing.location){
-                            "Location Sharing On"
-                        }else{
-                            "Location Sharing Off"
-                        },
-                        fontSize = 12.sp,
-                        color=GlimpseTextGray
-                    )
+
+                    Column {
+                        Text(
+                            text = connection.name,
+                            color = GlimpseNavy,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Text(
+                            text = if (locationAvailable) {
+                                "Location Sharing On"
+                            } else {
+                                "Location Sharing Off"
+                            },
+                            fontSize = 12.sp,
+                            color = GlimpseTextGray
+                        )
+                    }
                 }
             }
         }
@@ -757,8 +747,7 @@ private fun PeopleContent(
 @Composable
 private fun PlacesContent() {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = GlimpseSoftGray
     ) {
@@ -822,10 +811,13 @@ private fun PlacesContent() {
 }
 
 @Composable
-private fun GroupsContent() {
+private fun GroupsContent(
+    onOpenGroups: () -> Unit
+) {
     Surface(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .clickable(onClick = onOpenGroups),
         shape = RoundedCornerShape(22.dp),
         color = GlimpseSoftGray
     ) {
