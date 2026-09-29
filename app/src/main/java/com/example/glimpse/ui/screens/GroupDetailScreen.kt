@@ -57,6 +57,7 @@ import com.example.glimpse.groups.GroupsViewModel
 import com.example.glimpse.model.GlimpseGroup
 import com.example.glimpse.model.GroupMember
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.rounded.LocationOn
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val Background = Color(0xFFF7F9FA)
@@ -70,6 +71,7 @@ fun GroupDetailScreen(
     groupId: String,
     onBack: () -> Unit,
     onAddPeople: () -> Unit,
+    onViewMap: () -> Unit,
     groupsViewModel: GroupsViewModel = viewModel()
 ) {
     val currentUid = FirebaseAuth.getInstance().currentUser?.uid
@@ -260,6 +262,10 @@ fun GroupDetailScreen(
             onAddPeople = {
                 showOptions = false
                 onAddPeople()
+            },
+            onViewMap = {
+                showOptions = false
+                onViewMap()
             },
             onRemoveMember = {
                 showOptions = false
@@ -625,6 +631,7 @@ private fun GroupOptionsSheet(
     isCreator: Boolean,
     onDismiss: () -> Unit,
     onAddPeople: () -> Unit,
+    onViewMap: () -> Unit,
     onRemoveMember: () -> Unit,
     onLeaveGroup: () -> Unit,
     onDeleteGroup: () -> Unit,
@@ -659,6 +666,12 @@ private fun GroupOptionsSheet(
                 icon = Icons.Rounded.GroupAdd,
                 title = "Add people",
                 onClick = onAddPeople
+            )
+
+            GroupOptionItem(
+                icon = Icons.Rounded.LocationOn,
+                title = "View group on map",
+                onClick = onViewMap
             )
 
             if (isCreator) {
