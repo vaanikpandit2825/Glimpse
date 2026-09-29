@@ -57,6 +57,13 @@ import com.example.glimpse.model.GroupMember
 import com.example.glimpse.groups.GroupsViewModel
 import com.example.glimpse.model.GlimpseGroup
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.runtime.LaunchedEffect
+import com.example.glimpse.firebase.FirebaseRepository
+import com.example.glimpse.Location.LocationNameRepository
+import com.example.glimpse.connection.ConnectionRequestViewModel
+import com.example.glimpse.model.ConnectionRequest
+import com.example.glimpse.model.UserLocation
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val Background = Color(0xFFF7F9FA)
@@ -68,12 +75,25 @@ fun GroupsScreen(
     onBack: () -> Unit = {},
     onCreateGroup: () -> Unit = {},
     onGroupClick: (GlimpseGroup) -> Unit = {},
-    groupsViewModel: GroupsViewModel = viewModel()
+    groupsViewModel: GroupsViewModel = viewModel(),
+    connectionViewModel: ConnectionRequestViewModel = viewModel()
 ) {
     val currentUser = FirebaseAuth.getInstance().currentUser
 
     var groupList by remember {
         mutableStateOf<List<GlimpseGroup>>(emptyList())
+    }
+
+    var locations by remember {
+        mutableStateOf<List<UserLocation>>(emptyList())
+    }
+
+    var connections by remember {
+        mutableStateOf<List<ConnectionRequest>>(emptyList())
+    }
+
+    var groupLocations by remember {
+        mutableStateOf<Map<String, String>>(emptyMap())
     }
 
     var isLoading by remember {
@@ -124,6 +144,68 @@ fun GroupsScreen(
                 isLoading = false
             }
         )
+
+        connectionViewModel.getConnections(
+            onResult = {
+                connections = it
+            },
+            onFailure = {}
+        )
+
+        FirebaseRepository().getUsersLocations {
+            locations = it
+        }
+    }
+
+    LaunchedEffect(
+        groupList,
+        groupMembers,
+        locations,
+        connections
+    ) {
+        val locationRepository = LocationNameRepository()
+        val result = mutableMapOf<String, String>()
+
+        groupList.forEach { group ->
+
+            val sharingMemberIds = connections
+                .filter { it.senderSharing.location }
+                .map { it.senderUid }
+                .toSet()
+
+            val visibleLocations = groupMembers[group.id]
+                .orEmpty()
+                .filter { member ->
+                    member.uid == currentUser?.uid ||
+                            member.uid in sharingMemberIds
+                }
+                .mapNotNull { member ->
+                    locations.firstOrNull {
+                        it.uid == member.uid
+                    }
+                }
+
+            if (visibleLocations.isEmpty()) {
+                return@forEach
+            }
+
+            val averageLatitude =
+                visibleLocations.map { it.latitude }.average()
+
+            val averageLongitude =
+                visibleLocations.map { it.longitude }.average()
+
+            locationRepository.getLocationName(
+                latitude = averageLatitude,
+                longitude = averageLongitude
+            ) { name ->
+
+                if (!name.isNullOrBlank()) {
+                    groupLocations =
+                        groupLocations + (group.id to name)
+                }
+            }
+        }
     }
 
     Box(
@@ -210,6 +292,7 @@ fun GroupsScreen(
                                 GroupCard(
                                     group = group,
                                     members = groupMembers[group.id] ?: emptyList(),
+                                    locationName = groupLocations[group.id],
                                     onClick = {
                                         onGroupClick(group)
                                     }
@@ -327,6 +410,7 @@ private fun GroupsTopBar(
 private fun GroupCard(
     group: GlimpseGroup,
     members: List<GroupMember>,
+    locationName: String?,
     onClick: () -> Unit
 ) {
     val groupIcon = when (group.type.lowercase()) {
