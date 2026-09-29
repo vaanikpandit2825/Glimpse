@@ -10,13 +10,11 @@ import com.example.glimpse.ui.screens.EditProfileScreen
 import com.example.glimpse.ui.screens.HomeScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.ProfileScreen
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.mutableStateOf
 import com.example.glimpse.model.SharingPermissions
 import com.example.glimpse.ui.screens.AddPersonScreen
 import com.example.glimpse.ui.screens.GlimpseCodeScreen
 import com.example.glimpse.ui.screens.ConnectionRequestScreen
-import okhttp3.Connection
 import com.example.glimpse.ui.screens.ConnectionsRequestScreen
 import com.example.glimpse.ui.screens.ReviewSharingScreen
 import com.example.glimpse.ui.screens.SharingPermissionsScreen
@@ -26,7 +24,6 @@ import com.example.glimpse.ui.screens.SavedPlacesScreen
 import com.example.glimpse.ui.screens.AddPlaceScreen
 import com.example.glimpse.ui.screens.ConfirmPlaceScreen
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.glimpse.places.PlaceSearchResult
@@ -43,9 +40,12 @@ import com.example.glimpse.ui.screens.CreateGroupScreen
 import com.example.glimpse.ui.screens.GroupsScreen
 import com.example.glimpse.ui.screens.AddPeopleToGroupScreen
 import com.example.glimpse.ui.screens.GroupDetailScreen
+import com.example.glimpse.ui.screens.GroupMapScreen
+
 @Composable
-fun AppNavigation(){
-    val navController= rememberNavController()
+fun AppNavigation() {
+
+    val navController = rememberNavController()
     val context = LocalContext.current
 
     var currentLatitude by remember {
@@ -62,7 +62,7 @@ fun AppNavigation(){
 
     val savedPlaceViewModel: SavedPlaceViewModel = viewModel()
 
-    val groupsViewModel: GroupsViewModel=viewModel()
+    val groupsViewModel: GroupsViewModel = viewModel()
 
     RequestLocationPermission(
         onPermissionGranted = {
@@ -72,7 +72,8 @@ fun AppNavigation(){
             }
         }
     )
-    var selectedPlace by remember{
+
+    var selectedPlace by remember {
         mutableStateOf<PlaceSearchResult?>(null)
     }
 
@@ -84,49 +85,51 @@ fun AppNavigation(){
         mutableStateOf<Double?>(null)
     }
 
-    var editingPlace by remember{
+    var editingPlace by remember {
         mutableStateOf<SavedPlace?>(null)
     }
+
     val user = FirebaseAuth.getInstance().currentUser
 
-    val startDestination = if(user!=null){
-        "login"
-    }
-    else{
-        "signup"
-    }
     NavHost(
         navController = navController,
-        startDestination = "savedPlaces"
-    )
-    {
-        composable("signup"){
+        startDestination = if (user != null) "home" else "login"
+    ) {
+
+        composable("signup") {
             SignupScreen(navController)
         }
-        composable("login"){
+
+        composable("login") {
             LoginScreen(navController)
         }
-        composable("home"){
+
+        composable("home") {
             HomeScreen(navController)
         }
-        composable("profile"){
+
+        composable("profile") {
             ProfileScreen(navController)
         }
-        composable("editProfile"){
+
+        composable("editProfile") {
             EditProfileScreen(
-                navController=navController
+                navController = navController
             )
         }
-        composable ("glimpseCode" ){
+
+        composable("glimpseCode") {
             GlimpseCodeScreen(
-                navController=navController
+                navController = navController
             )
         }
-        composable("addperson"){
+
+        composable("addperson") {
             AddPersonScreen(
-                navController=navController
+                navController = navController
             )
         }
+
         composable(
             route = "connectionRequest/{receiverUid}"
         ) { backStackEntry ->
@@ -137,19 +140,21 @@ fun AppNavigation(){
             if (receiverUid != null) {
                 ConnectionRequestScreen(
                     navController = navController,
-                    receiverUid = receiverUid,
+                    receiverUid = receiverUid
                 )
             }
         }
-        composable("connectionRequests"){
+
+        composable("connectionRequests") {
             ConnectionsRequestScreen(
-                navController=navController
+                navController = navController
             )
         }
 
         composable(
             route = "sharingPermissions/{senderUid}?location={location}&profile={profile}&locationHistory={locationHistory}"
         ) { backStackEntry ->
+
             val senderUid =
                 backStackEntry.arguments?.getString("senderUid") ?: ""
 
@@ -172,6 +177,7 @@ fun AppNavigation(){
                 )
             )
         }
+
         composable(
             route = "reviewSharing/{senderUid}?location={location}&profile={profile}&locationHistory={locationHistory}"
         ) { backStackEntry ->
@@ -198,21 +204,20 @@ fun AppNavigation(){
                 )
             )
         }
-        composable(
-            route="sendConnectionPermission/{receiverUid}"
-        ){
-            backStackEntry ->
-            val receiverUid=backStackEntry.arguments?.getString("receiverUid")
 
-            if(receiverUid!=null){
+        composable(
+            route = "sendConnectionPermission/{receiverUid}"
+        ) { backStackEntry ->
+
+            val receiverUid =
+                backStackEntry.arguments?.getString("receiverUid")
+
+            if (receiverUid != null) {
                 SendConnectionPermissionsScreen(
-                    navController=navController,
-                    receiverUid=receiverUid
+                    navController = navController,
+                    receiverUid = receiverUid
                 )
             }
-        }
-        composable(route= "connections"){
-            ConnectionsScreen(navController)
         }
 
         composable(route = "connections") {
@@ -229,6 +234,7 @@ fun AppNavigation(){
                     navController.navigate("addPlace")
                 },
                 onEditPlace = { place ->
+
                     editingPlace = place
 
                     selectedPlace = PlaceSearchResult(
@@ -243,13 +249,18 @@ fun AppNavigation(){
                 }
             )
         }
+
         composable("addPlace") {
             AddPlaceScreen(
                 onBack = {
                     navController.popBackStack()
                 },
                 onUseCurrentLocation = {
-                    if (currentLatitude != null && currentLongtitude != null) {
+
+                    if (
+                        currentLatitude != null &&
+                        currentLongtitude != null
+                    ) {
 
                         selectedPlace = PlaceSearchResult(
                             id = "current_${System.currentTimeMillis()}",
@@ -266,15 +277,19 @@ fun AppNavigation(){
                     navController.navigate("pickPlaceOnMap")
                 },
                 onPlaceSelected = { place ->
+
                     selectedPlace = place
+
                     navController.navigate("confirmPlace")
                 }
             )
         }
-        composable("pickPlaceOnMap"){
+
+        composable("pickPlaceOnMap") {
+
             PickPlaceOnMapScreen(
-                latitude = selectedPlace?.latitude?:currentLatitude,
-                longitude = selectedPlace?.longitude?:currentLongtitude,
+                latitude = selectedPlace?.latitude ?: currentLatitude,
+                longitude = selectedPlace?.longitude ?: currentLongtitude,
                 onBack = {
                     navController.popBackStack()
                 },
@@ -286,9 +301,12 @@ fun AppNavigation(){
                     val currentPlace = selectedPlace
 
                     selectedPlace = PlaceSearchResult(
-                        id = currentPlace?.id ?: "picked_${System.currentTimeMillis()}",
-                        name = currentPlace?.name ?: "Selected location",
-                        address = currentPlace?.address ?: "Location picked on map",
+                        id = currentPlace?.id
+                            ?: "picked_${System.currentTimeMillis()}",
+                        name = currentPlace?.name
+                            ?: "Selected location",
+                        address = currentPlace?.address
+                            ?: "Location picked on map",
                         latitude = latitude,
                         longitude = longtitude
                     )
@@ -297,30 +315,38 @@ fun AppNavigation(){
                 }
             )
         }
-        composable("confirmPlace"){
-            val place=selectedPlace
 
-            if(place!=null){
+        composable("confirmPlace") {
+
+            val place = selectedPlace
+
+            if (place != null) {
+
                 ConfirmPlaceScreen(
-                    place=place,
-                    onBack={
+                    place = place,
+                    onBack = {
                         navController.popBackStack()
                     },
-                    onUseLocation = {confirmedPlace->
-                        selectedPlace=confirmedPlace
+                    onUseLocation = { confirmedPlace ->
+
+                        selectedPlace = confirmedPlace
+
                         navController.navigate("placeDetails")
                     },
-                    onAdjustPin={
+                    onAdjustPin = {
                         navController.navigate("pickPlaceOnMap")
                     }
                 )
             }
         }
+
         composable("placeDetails") {
+
             val place = selectedPlace
             val existingPlace = editingPlace
 
             if (place != null) {
+
                 PlaceDetailsScreen(
                     place = place,
                     existingPlace = existingPlace,
@@ -340,6 +366,7 @@ fun AppNavigation(){
                             savedPlaceViewModel.updateSavedPlace(
                                 place = updatedPlace,
                                 onSuccess = {
+
                                     editingPlace = null
 
                                     navController.navigate("savedPlaces") {
@@ -368,6 +395,7 @@ fun AppNavigation(){
                             savedPlaceViewModel.savePlace(
                                 place = savedPlace,
                                 onSuccess = {
+
                                     navController.navigate("savedPlaces") {
                                         popUpTo("addPlace") {
                                             inclusive = true
@@ -383,7 +411,9 @@ fun AppNavigation(){
                 )
             }
         }
+
         composable("groups") {
+
             GroupsScreen(
                 onBack = {
                     navController.popBackStack()
@@ -408,13 +438,36 @@ fun AppNavigation(){
                 groupId = groupId,
                 onBack = {
                     navController.popBackStack()
+                },
+                onAddPeople = {
+                    navController.navigate("addPeopleToGroup/$groupId")
+                },
+                onViewMap = {
+                    navController.navigate("groupMap/$groupId")
+                }
+            )
+        }
+
+        composable("groupMap/{groupId}") { backStackEntry ->
+
+            val groupId =
+                backStackEntry.arguments?.getString("groupId")
+                    ?: return@composable
+
+            GroupMapScreen(
+                groupId = groupId,
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
 
         composable("createGroup") {
+
             CreateGroupScreen(
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    navController.popBackStack()
+                },
                 onGroupCreated = {
                     navController.navigate("groups") {
                         popUpTo("createGroup") {
@@ -425,6 +478,7 @@ fun AppNavigation(){
                 groupsViewModel = groupsViewModel
             )
         }
+
         composable("addPeopleToGroup/{groupId}") { backStackEntry ->
 
             val groupId =
