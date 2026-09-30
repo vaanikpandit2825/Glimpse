@@ -878,4 +878,58 @@ class FirebaseRepository {
                 }
         }
     }
+    fun getGroupSharingPermissions(
+        groupId: String,
+        uid: String,
+        onSuccess: (SharingPermissions) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        groupsRef
+            .child(groupId)
+            .child("sharing")
+            .child(uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val permissions = SharingPermissions(
+                    location = snapshot.child("location")
+                        .getValue(Boolean::class.java) ?: false,
+                    profile = snapshot.child("profile")
+                        .getValue(Boolean::class.java) ?: true,
+                    locationHistory = snapshot.child("locationHistory")
+                        .getValue(Boolean::class.java) ?: false
+                )
+
+                onSuccess(permissions)
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
+
+    fun updateGroupSharingPermissions(
+        groupId: String,
+        uid: String,
+        permissions: SharingPermissions,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val sharing = mapOf(
+            "location" to permissions.location,
+            "profile" to permissions.profile,
+            "locationHistory" to permissions.locationHistory
+        )
+
+        groupsRef
+        groupsRef
+            .child(groupId)
+            .child("sharing")
+            .child(uid)
+            .setValue(sharing)
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener {
+                onFailure(it)
+            }
+    }
 }
