@@ -331,7 +331,10 @@ fun SharingPermissionsScreen(
                     ?.set("sharing_location_history", locationHistory)
 
                 navController.navigate(
-                    "reviewSharing/$senderUid"
+                    "reviewSharing/$senderUid" +
+                            "?location=$location" +
+                            "&profile=$profile" +
+                            "&locationHistory=$locationHistory"
                 )
             },
             modifier = Modifier
