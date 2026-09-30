@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.example.glimpse.firebase.FirebaseRepository
 import com.example.glimpse.model.GlimpseGroup
 import com.example.glimpse.model.GroupMember
+import com.example.glimpse.model.SharingPermissions
 
 class GroupsViewModel : ViewModel() {
 
@@ -80,6 +81,36 @@ class GroupsViewModel : ViewModel() {
     ) {
         repository.deleteGroup(
             groupId = groupId,
+            onSuccess = onSuccess,
+            onFailure = onFailure
+        )
+    }
+
+    fun getGroupSharingPermissions(
+        groupId: String,
+        uid: String,
+        onSuccess: (SharingPermissions) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        repository.getGroupSharingPermissions(
+            groupId = groupId,
+            uid = uid,
+            onSuccess = onSuccess,
+            onFailure = onFailure
+        )
+    }
+
+    fun updateGroupSharingPermissions(
+        groupId: String,
+        uid: String,
+        permissions: SharingPermissions,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        repository.updateGroupSharingPermissions(
+            groupId = groupId,
+            uid = uid,
+            permissions = permissions,
             onSuccess = onSuccess,
             onFailure = onFailure
         )
