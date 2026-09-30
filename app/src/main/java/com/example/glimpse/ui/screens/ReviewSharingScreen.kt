@@ -339,10 +339,12 @@ fun ReviewSharingScreen(
                     permissions = permissions,
                     onSuccess = {
                         isLoading = false
-                        navController.navigate("Connections"){
-                            popUpTo("connectionRequests"){
-                                inclusive=true
+
+                        navController.navigate("connections") {
+                            popUpTo("connectionRequests") {
+                                inclusive = true
                             }
+                            launchSingleTop = true
                         }
                     },
                     onFailure = { error ->
