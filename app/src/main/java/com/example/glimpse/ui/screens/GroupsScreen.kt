@@ -217,8 +217,7 @@ fun GroupsScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             GroupsTopBar(
-                onBack = onBack,
-                onCreateGroup = onCreateGroup
+                onBack = onBack
             )
 
             when {
@@ -304,38 +303,13 @@ fun GroupsScreen(
             }
         }
 
-        if (!isLoading && groupList.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(
-                        end = 20.dp,
-                        bottom = 24.dp
-                    )
-                    .navigationBarsPadding()
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(GlimpseBlue)
-                    .clickable {
-                        onCreateGroup()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create group",
-                    tint = Color.White,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-        }
+
     }
 }
 
 @Composable
 private fun GroupsTopBar(
-    onBack: () -> Unit,
-    onCreateGroup: () -> Unit
+    onBack: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -383,24 +357,6 @@ private fun GroupsTopBar(
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 color = TextSecondary
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(GlimpseBlue)
-                .clickable {
-                    onCreateGroup()
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Create group",
-                tint = Color.White,
-                modifier = Modifier.size(27.dp)
             )
         }
     }
@@ -498,8 +454,36 @@ private fun GroupCard(
                     color = TextSecondary
                 )
 
+                if (!locationName.isNullOrBlank()) {
+                    Spacer(
+                        modifier = Modifier.height(5.dp)
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = GlimpseBlue,
+                            modifier = Modifier.size(15.dp)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(4.dp)
+                        )
+
+                        Text(
+                            text = locationName,
+                            fontSize = 13.sp,
+                            color = TextSecondary,
+                            maxLines = 1
+                        )
+                    }
+                }
+
                 Spacer(
-                    modifier = Modifier.height(10.dp)
+                    modifier = Modifier.height(8.dp)
                 )
 
                 MemberAvatarPreview(
