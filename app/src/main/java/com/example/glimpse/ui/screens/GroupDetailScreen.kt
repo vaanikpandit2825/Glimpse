@@ -60,6 +60,7 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.rounded.Security
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val Background = Color(0xFFF7F9FA)
@@ -74,6 +75,7 @@ fun GroupDetailScreen(
     onBack: () -> Unit,
     onAddPeople: () -> Unit,
     onViewMap: () -> Unit,
+    onSharingPermissions: () -> Unit,
     groupsViewModel: GroupsViewModel = viewModel()
 ) {
     val currentUid = FirebaseAuth.getInstance().currentUser?.uid
@@ -280,6 +282,10 @@ fun GroupDetailScreen(
             onDeleteGroup = {
                 showOptions = false
                 showDeleteDialog = true
+            },
+            onSharingPermissions = {
+                showOptions = false
+                onSharingPermissions()
             },
             sheetState = rememberModalBottomSheetState(
                 skipPartiallyExpanded = true
@@ -637,6 +643,7 @@ private fun GroupOptionsSheet(
     onRemoveMember: () -> Unit,
     onLeaveGroup: () -> Unit,
     onDeleteGroup: () -> Unit,
+    onSharingPermissions:()->Unit,
     sheetState: SheetState
 ) {
     ModalBottomSheet(
@@ -674,6 +681,12 @@ private fun GroupOptionsSheet(
                 icon = Icons.Rounded.LocationOn,
                 title = "View group on map",
                 onClick = onViewMap
+            )
+
+            GroupOptionItem(
+                icon=Icons.Rounded.Security,
+                title="Sharing Permissions",
+                onClick = onSharingPermissions
             )
 
             if (isCreator) {
