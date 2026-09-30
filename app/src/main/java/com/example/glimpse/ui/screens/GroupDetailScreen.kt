@@ -58,6 +58,8 @@ import com.example.glimpse.model.GlimpseGroup
 import com.example.glimpse.model.GroupMember
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.offset
 
 private val GlimpseBlue = Color(0xFF0077BE)
 private val Background = Color(0xFFF7F9FA)
@@ -717,15 +719,16 @@ private fun GroupOptionItem(
                     Color(0xFFF7F9FA)
                 }
             )
+            .clickable(onClick = onClick)
             .padding(
                 horizontal = 16.dp,
                 vertical = 15.dp
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(42.dp)
+        Box(
+            modifier = Modifier.size(42.dp),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
@@ -923,8 +926,8 @@ private fun MemberAvatarStack(
         visibleMembers.forEachIndexed { index, member ->
             Box(
                 modifier = Modifier
-                    .padding(
-                        start = if (index == 0) {
+                    .offset(
+                        x = if (index == 0) {
                             0.dp
                         } else {
                             (-8).dp
@@ -939,152 +942,152 @@ private fun MemberAvatarStack(
                         shape = CircleShape
                     )
             ) {
-                if (member.profilePhotoUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = member.profilePhotoUrl,
-                        contentDescription = "Profile photo",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFFE1F0FA)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = GlimpseBlue
+                    if (member.profilePhotoUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = member.profilePhotoUrl,
+                            contentDescription = "Profile photo",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFE1F0FA)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = GlimpseBlue
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        if (members.size > 4) {
-            Box(
-                modifier = Modifier
-                    .padding(start = 2.dp)
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFEAF3F8)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "+${members.size - 4}",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GlimpseBlue
-                )
+            if (members.size > 4) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 2.dp)
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEAF3F8)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+${members.size - 4}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlimpseBlue
+                    )
+                }
             }
         }
     }
-}
 
-@Composable
-private fun GroupMemberItem(
-    member: GroupMember,
-    isCreator: Boolean
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(17.dp))
-            .background(Color.White)
-            .border(
-                width = 1.dp,
-                color = CardBorder,
-                shape = RoundedCornerShape(17.dp)
-            )
-            .padding(
-                horizontal = 14.dp,
-                vertical = 12.dp
-            ),
-        verticalAlignment = Alignment.CenterVertically
+    @Composable
+    private fun GroupMemberItem(
+        member: GroupMember,
+        isCreator: Boolean
     ) {
-        if (member.profilePhotoUrl.isNotEmpty()) {
-            AsyncImage(
-                model = member.profilePhotoUrl,
-                contentDescription = "Profile photo",
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE1F0FA)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(27.dp),
-                    tint = GlimpseBlue
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(17.dp))
+                .background(Color.White)
+                .border(
+                    width = 1.dp,
+                    color = CardBorder,
+                    shape = RoundedCornerShape(17.dp)
                 )
-            }
-        }
-
-        Spacer(
-            modifier = Modifier.width(12.dp)
-        )
-
-        Column(
-            modifier = Modifier.weight(1f)
+                .padding(
+                    horizontal = 14.dp,
+                    vertical = 12.dp
+                ),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = member.name.ifEmpty {
-                    "Unknown user"
-                },
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
+            if (member.profilePhotoUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = member.profilePhotoUrl,
+                    contentDescription = "Profile photo",
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE1F0FA)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(27.dp),
+                        tint = GlimpseBlue
+                    )
+                }
+            }
 
             Spacer(
-                modifier = Modifier.height(3.dp)
+                modifier = Modifier.width(12.dp)
             )
 
-            Text(
-                text = if (isCreator) {
-                    "Group creator"
-                } else {
-                    "Member"
-                },
-                fontSize = 11.sp,
-                color = if (isCreator) {
-                    GlimpseBlue
-                } else {
-                    TextSecondary
-                }
-            )
-        }
-
-        if (isCreator) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFE5F2FC))
-                    .padding(
-                        horizontal = 8.dp,
-                        vertical = 5.dp
-                    )
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Creator",
-                    fontSize = 9.sp,
+                    text = member.name.ifEmpty {
+                        "Unknown user"
+                    },
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = GlimpseBlue
+                    color = TextPrimary
                 )
+
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
+
+                Text(
+                    text = if (isCreator) {
+                        "Group creator"
+                    } else {
+                        "Member"
+                    },
+                    fontSize = 11.sp,
+                    color = if (isCreator) {
+                        GlimpseBlue
+                    } else {
+                        TextSecondary
+                    }
+                )
+            }
+
+            if (isCreator) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE5F2FC))
+                        .padding(
+                            horizontal = 8.dp,
+                            vertical = 5.dp
+                        )
+                ) {
+                    Text(
+                        text = "Creator",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GlimpseBlue
+                    )
+                }
             }
         }
     }
-}
