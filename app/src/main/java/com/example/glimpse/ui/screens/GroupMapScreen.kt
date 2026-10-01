@@ -58,8 +58,21 @@ import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Point
-
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.clickable
+import com.example.glimpse.model.SharingPermissions
 private val GlimpseBlue = Color(0xFF0077BE)
+
+private fun getLocationStatus(timestamp: Long,refreshTick: Int):String{
+    val age = System.currentTimeMillis() - timestamp
+
+    return when {
+        age < 2 * 60 * 1000 -> "Live"
+        age < 10 * 60 * 1000 -> "${age / 60000} min ago"
+        age < 60 * 60 * 1000 -> "${age / 60000} min ago"
+        else -> "Location is stale"
+    }
+}
 
 data class GroupMapLocation(
     val member: GroupMember,
@@ -119,6 +132,14 @@ fun GroupMapScreen(
         mutableStateOf(false)
     }
 
+    var freshnessTick by remember {
+        mutableStateOf(0)
+    }
+
+    var selectedMember by remember {
+        mutableStateOf<GroupMapLocation?>(null)
+    }
+
     if (currentUid == null) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -176,6 +197,13 @@ fun GroupMapScreen(
         repository.getUsersLocations { result ->
             locations = result
             locationsLoaded = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000)
+            freshnessTick++
         }
     }
 
@@ -298,7 +326,21 @@ fun GroupMapScreen(
                 CircleLayer(
                     id = "group-location-${item.member.uid}",
                     source = source,
-                    color = const(GlimpseBlue)
+                    color = const(
+                        if (
+                            System.currentTimeMillis() - item.location.timestamp <
+                            2 * 60 * 1000
+                        ) {
+                            GlimpseBlue
+                        } else if (
+                            System.currentTimeMillis() - item.location.timestamp <
+                            10 * 60 * 1000
+                        ) {
+                            Color.Gray
+                        } else {
+                            Color.LightGray
+                        }
+                    )
                 )
             }
         }
@@ -464,6 +506,28 @@ fun GroupMapScreen(
             }
         }
 
+        if (selectedMember != null) {
+            MemberLocationSheet(
+                member = selectedMember!!.member,
+                location = selectedMember!!.location,
+                permissions = SharingPermissions(
+                    location = true,
+                    profile = true,
+                    locationHistory = false
+                ),
+                placeName = null,
+                onDismiss = {
+                    selectedMember = null
+                },
+                onViewProfile = {
+                    // connect later
+                },
+                onGetDirections = {
+                    // connect later
+                }
+            )
+        }
+
         if (!isLoading && visibleLocations.isNotEmpty()) {
 
             Column(
@@ -494,7 +558,10 @@ fun GroupMapScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 6.dp)
+                            .clickable {
+                                selectedMember = item
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
@@ -509,12 +576,27 @@ fun GroupMapScreen(
                             modifier = Modifier.size(10.dp)
                         )
 
-                        Text(
-                            text = item.member.name.ifBlank {
-                                "Unknown"
-                            },
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        Column {
+                            Text(
+                                text = item.member.name.ifBlank {
+                                    "Unknown"
+                                },
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+
+                            Text(
+                                text = getLocationStatus(item.location.timestamp,freshnessTick),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (
+                                    System.currentTimeMillis() - item.location.timestamp <
+                                    2 * 60 * 1000
+                                ) {
+                                    GlimpseBlue
+                                } else {
+                                    Color.Gray
+                                }
+                            )
+                        }
                     }
                 }
             }
