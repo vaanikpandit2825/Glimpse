@@ -43,6 +43,8 @@ import com.example.glimpse.ui.screens.SendConnectionPermissionsScreen
 import com.example.glimpse.ui.screens.SharingPermissionsScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.GroupSharingPermissionsScreen
+import com.example.glimpse.model.GroupMember
+import com.example.glimpse.ui.screens.MemberProfileScreen
 
 @Composable
 fun AppNavigation() {
@@ -522,16 +524,21 @@ fun AppNavigation() {
 
 
         composable("groupMap/{groupId}") { backStackEntry ->
-
             val groupId =
                 backStackEntry.arguments?.getString("groupId")
                     ?: return@composable
 
             GroupMapScreen(
                 groupId = groupId,
-
                 onBack = {
                     navController.popBackStack()
+                },
+                onViewMemberProfile = { member ->
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("member", member)
+
+                    navController.navigate("memberProfile")
                 }
             )
         }
@@ -556,6 +563,21 @@ fun AppNavigation() {
                 },
 
                 groupsViewModel = groupsViewModel
+            )
+        }
+
+        composable("memberProfile") {
+            val member =
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<GroupMember>("member")
+                    ?: return@composable
+
+            MemberProfileScreen(
+                member = member,
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
 
