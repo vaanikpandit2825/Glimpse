@@ -1,41 +1,49 @@
 package com.example.glimpse.ui.screens
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.BatteryManager
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.outlined.GpsFixed
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.NearMe
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.GppMaybe
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.rounded.SignalCellularAlt
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,22 +54,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.glimpse.BuildConfig
 import com.example.glimpse.Location.LocationRepository
 import com.example.glimpse.Location.RequestLocationPermission
-import com.example.glimpse.connection.ConnectionRequestViewModel
 import com.example.glimpse.firebase.FirebaseRepository
-import com.example.glimpse.model.ConnectionRequest
 import com.example.glimpse.model.UserLocation
+import com.example.glimpse.util.LocationPlaceUtils
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import org.maplibre.compose.camera.CameraPosition
@@ -75,20 +84,30 @@ import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
 
-private val GlimpseBlue = Color(0xFF0077BE)
-private val GlimpseNavy = Color(0xFF14202B)
-private val GlimpseWhite = Color(0xFFFFFFFF)
-private val GlimpseSoftBlue = Color(0xFFEAF4FA)
-private val GlimpseSoftGray = Color(0xFFF5F7F8)
-private val GlimpseTextGray = Color(0xFF69757D)
+private val GlimpseBlue = Color(0xFF4F46E5)
+private val GlimpseBlueLight = Color(0xFF6C7BFF)
+private val GlimpseViolet = Color(0xFF8B5CF6)
+private val GlimpseBlueSoft = Color(0xFFEDEBFF)
+private val GlimpseActionBlueBg = Color(0xFFEEF0FF)
+private val GlimpseRowTint = Color(0xFFF4F4FD)
+private val GlimpseSheet = Color(0xFFFBFBFF)
+private val GlimpseNavTint = Color(0xFFF5F5FC)
+private val GlimpseNavy = Color(0xFF111827)
+private val GlimpseTextGray = Color(0xFF6B7280)
+private val GlimpseHandle = Color(0xFFD9DCE6)
+private val GlimpseWhite = Color.White
+private val GlimpseGreen = Color(0xFF20B878)
+private val GlimpseAmber = Color(0xFFF5A623)
+private val GlimpseRed = Color(0xFFFF4D5E)
+private val GlimpseRedSoft = Color(0xFFFFEAEE)
+private val GlimpseBackground = Color(0xFFF8F9FC)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController
 ) {
-    val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val locationRepository = remember {
         LocationRepository(context)
@@ -98,9 +117,9 @@ fun HomeScreen(
         FirebaseRepository()
     }
 
-    val connectionViewModel: ConnectionRequestViewModel = viewModel()
-
     val cameraState = rememberCameraState()
+
+    val currentUser = FirebaseAuth.getInstance().currentUser
 
     var locationPermissionGranted by remember {
         mutableStateOf(false)
@@ -110,55 +129,77 @@ fun HomeScreen(
         mutableStateOf(emptyList<UserLocation>())
     }
 
-    var connections = remember {
-        mutableStateOf(emptyList<ConnectionRequest>())
+    var placeName by remember {
+        mutableStateOf<String?>(null)
     }
 
-    val currentUser = FirebaseAuth.getInstance().currentUser
+    var userName by remember {
+        mutableStateOf(
+            currentUser?.displayName
+                ?.takeIf { it.isNotBlank() }
+                ?: "there"
+        )
+    }
 
-    val sheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.PartiallyExpanded,
-        skipHiddenState = true
-    )
+    var profilePhotoUrl by remember {
+        mutableStateOf(
+            currentUser?.photoUrl?.toString() ?: ""
+        )
+    }
 
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = sheetState
-    )
+    var batteryLevel by remember {
+        mutableStateOf(getBatteryLevel(context))
+    }
 
-    LaunchedEffect(Unit) {
-        firebaseRepository.getUsersLocations { locations ->
-            userLocations = locations
-
-            Log.d(
-                "GLIMPSE_LOCATION",
-                "Loaded ${locations.size} user locations"
-            )
-        }
+    var networkStatus by remember {
+        mutableStateOf(getNetworkStatus(context))
     }
 
     LaunchedEffect(Unit) {
-        connectionViewModel.getConnections(
-            onResult = { result ->
-                connections.value = result
+        firebaseRepository.getCurrentUserProfile(
+            onResult = { name, photoUrl ->
+                if (name.isNotBlank()) {
+                    userName = name
+                }
+
+                if (photoUrl.isNotBlank()) {
+                    profilePhotoUrl = photoUrl
+                }
             },
-            onFailure = { exception ->
+            onFailure = {
                 Log.e(
-                    "GLIMPSE_CONNECTIONS",
-                    "Failed to load connections",
-                    exception
+                    "GLIMPSE_PROFILE",
+                    "Failed to load profile",
+                    it
                 )
             }
         )
     }
 
+    LaunchedEffect(Unit) {
+        firebaseRepository.getUsersLocations { locations ->
+            userLocations = locations
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        batteryLevel = getBatteryLevel(context)
+        networkStatus = getNetworkStatus(context)
+    }
+
     fun moveToCurrentLocation() {
         locationRepository.getCurrentLocation { location ->
+
             if (location == null) {
-                Log.d(
-                    "GLIMPSE_LOCATION",
-                    "Current location is null"
-                )
                 return@getCurrentLocation
+            }
+
+            LocationPlaceUtils.getPlaceName(
+                context = context,
+                latitude = location.latitude,
+                longitude = location.longitude
+            ) { result ->
+                placeName = result
             }
 
             scope.launch {
@@ -175,707 +216,919 @@ fun HomeScreen(
         }
     }
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = 108.dp,
-        sheetContainerColor = GlimpseWhite,
-        sheetShape = RoundedCornerShape(
-            topStart = 30.dp,
-            topEnd = 30.dp
-        ),
-        sheetShadowElevation = 16.dp,
-        sheetContent = {
-            CircleSheet(
-                hasConnections = connections.value.isNotEmpty(),
-                connections = connections.value,
-                userLocations = userLocations,
-                onAddPeople = {
-                    navController.navigate("addperson")
-                },
-                onOpenConnections = {
-                    navController.navigate("connections")
-                },
-                onOpenGroups = {
-                    navController.navigate("groups")
-                }
-            )
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(GlimpseBackground)
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            MaplibreMap(
-                modifier = Modifier.fillMaxSize(),
-                baseStyle = BaseStyle.Uri(
-                    "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
-                ),
-                cameraState = cameraState
-            ) {
-                val myLocation = userLocations.find {
-                    it.uid == currentUser?.uid
-                }
 
-                if (myLocation != null) {
-                    val source = rememberGeoJsonSource(
-                        data = GeoJsonData.Features(
-                            Point(
-                                Position(
-                                    longitude = myLocation.longitude,
-                                    latitude = myLocation.latitude
-                                )
+        MaplibreMap(
+            modifier = Modifier.fillMaxSize(),
+            baseStyle = BaseStyle.Uri(
+                "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+            ),
+            cameraState = cameraState
+        ) {
+
+            val myLocation = userLocations.find {
+                it.uid == currentUser?.uid
+            }
+
+            if (myLocation != null) {
+
+                val source = rememberGeoJsonSource(
+                    data = GeoJsonData.Features(
+                        Point(
+                            Position(
+                                myLocation.longitude,
+                                myLocation.latitude
                             )
                         )
                     )
+                )
 
-                    CircleLayer(
-                        id = "my-location-layer",
-                        source = source,
-                        color = const(Color.Blue)
-                    )
-                }
-            }
+                // Soft accuracy halo
+                CircleLayer(
+                    id = "home-my-location-halo",
+                    source = source,
+                    radius = const(58.dp),
+                    color = const(
+                        Color(0xFF1976F3)
+                    ),
+                    opacity = const(0.14f)
+                )
 
-            if (!locationPermissionGranted) {
-                RequestLocationPermission(
-                    onPermissionGranted = {
-                        locationPermissionGranted = true
-
-                        locationRepository.getCurrentLocation { location ->
-                            if (location == null) {
-                                Log.d(
-                                    "GLIMPSE_LOCATION",
-                                    "Current location is null"
-                                )
-                                return@getCurrentLocation
-                            }
-
-                            scope.launch {
-                                cameraState.animateTo(
-                                    CameraPosition(
-                                        target = Position(
-                                            location.longitude,
-                                            location.latitude
-                                        ),
-                                        zoom = 15.5
-                                    )
-                                )
-                            }
-
-                            val uid = currentUser?.uid
-
-                            if (uid == null) {
-                                Log.d(
-                                    "GLIMPSE_AUTH",
-                                    "No logged-in user"
-                                )
-                                return@getCurrentLocation
-                            }
-
-                            firebaseRepository.updateLocation(
-                                uid = uid,
-                                latitude = location.latitude,
-                                longitude = location.longitude,
-                                onSuccess = {
-                                    firebaseRepository.getUsersLocations { locations ->
-                                        userLocations = locations
-                                    }
-                                }
-                            )
-                        }
-                    }
+                // Location dot
+                CircleLayer(
+                    id = "home-my-location",
+                    source = source,
+                    radius = const(9.dp),
+                    color = const(
+                        Color(0xFF1976F3)
+                    ),
+                    strokeColor = const(Color.White),
+                    strokeWidth = const(3.dp)
                 )
             }
+        }
+
+        if (!locationPermissionGranted) {
+
+            RequestLocationPermission(
+                onPermissionGranted = {
+
+                    locationPermissionGranted = true
+
+                    locationRepository.getCurrentLocation { location ->
+
+                        if (location == null) {
+                            return@getCurrentLocation
+                        }
+
+                        LocationPlaceUtils.getPlaceName(
+                            context = context,
+                            latitude = location.latitude,
+                            longitude = location.longitude
+                        ) { result ->
+                            placeName = result
+                        }
+
+                        scope.launch {
+                            cameraState.animateTo(
+                                CameraPosition(
+                                    target = Position(
+                                        location.longitude,
+                                        location.latitude
+                                    ),
+                                    zoom = 15.5
+                                )
+                            )
+                        }
+
+                        val uid = currentUser?.uid
+
+                        if (uid == null) {
+                            return@getCurrentLocation
+                        }
+
+                        firebaseRepository.updateLocation(
+                            uid = uid,
+                            latitude = location.latitude,
+                            longitude = location.longitude,
+                            onSuccess = {
+                                firebaseRepository.getUsersLocations { locations ->
+                                    userLocations = locations
+                                }
+                            }
+                        )
+                    }
+                }
+            )
+        }
+
+        HomeHeader(
+            userName = userName,
+            profilePhotoUrl = profilePhotoUrl,
+            onNotifications = {
+                navController.navigate("connectionRequests")
+            },
+            onProfile = {
+                navController.navigate("profile")
+            }
+        )
+
+        MapControls(
+            onMyLocation = {
+                moveToCurrentLocation()
+            }
+        )
+
+        HomeBottomSheet(
+            placeName = placeName,
+            batteryLevel = batteryLevel,
+            networkStatus = networkStatus,
+            onShareLocation = {
+                navController.navigate("connections")
+            },
+            onEmergencySos = {
+                navController.navigate("safety")
+            },
+            onHome = {},
+            onGroups = {
+                navController.navigate("groups")
+            },
+            onSafety = {
+                navController.navigate("safety")
+            }
+        )
+    }
+}
+
+/* ───────────────────────── HEADER ───────────────────────── */
+
+@Composable
+private fun BoxScope.HomeHeader(
+    userName: String,
+    profilePhotoUrl: String,
+    onNotifications: () -> Unit,
+    onProfile: () -> Unit
+) {
+    val greeting = getGreeting()
+    val emoji = getGreetingEmoji()
+
+    Column(
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        GlimpseWhite.copy(alpha = 0.94f),
+                        GlimpseWhite.copy(alpha = 0.80f),
+                        GlimpseWhite.copy(alpha = 0f)
+                    )
+                )
+            )
+            .padding(
+                top = WindowInsets.statusBars
+                    .asPaddingValues()
+                    .calculateTopPadding() + 8.dp,
+                start = 24.dp,
+                end = 18.dp,
+                bottom = 40.dp
+            )
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Text(
+                text = "GLIMPSE",
+                style = TextStyle(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            GlimpseBlueLight,
+                            GlimpseViolet
+                        )
+                    ),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                NotificationButton(
+                    onClick = onNotifications
+                )
+
+                ProfileButton(
+                    profilePhotoUrl = profilePhotoUrl,
+                    onClick = onProfile
+                )
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        Text(
+            text = greeting,
+            fontSize = 17.sp,
+            color = GlimpseNavy
+        )
+
+        Text(
+            text = "$userName $emoji",
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            color = GlimpseNavy,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(
+            modifier = Modifier.height(2.dp)
+        )
+
+        Text(
+            text = "\"Same place, new memories.\"",
+            fontSize = 14.sp,
+            color = GlimpseTextGray
+        )
+    }
+}
+
+@Composable
+private fun NotificationButton(
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+
+        Icon(
+            imageVector = Icons.Outlined.Notifications,
+            contentDescription = "Notifications",
+            tint = GlimpseNavy,
+            modifier = Modifier.size(26.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 9.dp, end = 10.dp)
+                .size(9.dp)
+                .clip(CircleShape)
+                .background(GlimpseRed)
+        )
+    }
+}
+
+@Composable
+private fun ProfileButton(
+    profilePhotoUrl: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.size(46.dp),
+        shape = CircleShape,
+        color = GlimpseBlueSoft,
+        shadowElevation = 4.dp,
+        border = BorderStroke(2.dp, GlimpseWhite)
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+
+            if (profilePhotoUrl.isNotBlank()) {
+
+                AsyncImage(
+                    model = profilePhotoUrl,
+                    contentDescription = "Profile",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
+            } else {
+
+                Icon(
+                    imageVector = Icons.Rounded.Person,
+                    contentDescription = "Profile",
+                    tint = GlimpseBlue,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+/* ─────────────────────── MAP CONTROLS ─────────────────────── */
+
+@Composable
+private fun BoxScope.MapControls(
+    onMyLocation: () -> Unit,
+    onNavigation: () -> Unit = {},
+    onLayers: () -> Unit = {}
+) {
+    Surface(
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .padding(
+                top = WindowInsets.statusBars
+                    .asPaddingValues()
+                    .calculateTopPadding() + 128.dp,
+                end = 16.dp
+            ),
+        shape = RoundedCornerShape(50),
+        color = GlimpseWhite.copy(alpha = 0.96f),
+        shadowElevation = 8.dp
+    ) {
+
+        Column(
+            modifier = Modifier.padding(
+                horizontal = 2.dp,
+                vertical = 4.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            MapControlButton(
+                icon = Icons.Outlined.NearMe,
+                contentDescription = "Navigation",
+                tint = GlimpseBlue,
+                onClick = onNavigation
+            )
+
+            MapControlButton(
+                icon = Icons.Outlined.Layers,
+                contentDescription = "Layers",
+                tint = GlimpseNavy,
+                onClick = onLayers
+            )
+
+            MapControlButton(
+                icon = Icons.Outlined.GpsFixed,
+                contentDescription = "My location",
+                tint = GlimpseNavy,
+                onClick = onMyLocation
+            )
+        }
+    }
+}
+
+@Composable
+private fun MapControlButton(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(46.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+/* ───────────────────── BOTTOM SHEET ───────────────────── */
+
+@Composable
+private fun BoxScope.HomeBottomSheet(
+    placeName: String?,
+    batteryLevel: Int,
+    networkStatus: String,
+    onShareLocation: () -> Unit,
+    onEmergencySos: () -> Unit,
+    onHome: () -> Unit,
+    onGroups: () -> Unit,
+    onSafety: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(
+            topStart = 32.dp,
+            topEnd = 32.dp
+        ),
+        color = GlimpseSheet.copy(alpha = 0.97f),
+        shadowElevation = 16.dp
+    ) {
+
+        Column(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(bottom = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .width(44.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(GlimpseHandle)
+            )
+
+            Spacer(
+                modifier = Modifier.height(10.dp)
+            )
+
+            LocationRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp),
+                placeName = placeName
+            )
+
+            Spacer(
+                modifier = Modifier.height(11.dp)
+            )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(
-                        horizontal = 18.dp,
-                        vertical = 12.dp
-                    ),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FloatingHomeButton(
-                    icon = Icons.Rounded.Person,
-                    contentDescription = "Profile",
-                    onClick = {
-                        navController.navigate("profile")
-                    }
+
+                StatusCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.WbSunny,
+                    iconTint = GlimpseAmber,
+                    value = "-",
+                    label = "Weather"
                 )
 
-                FloatingHomeButton(
-                    icon = Icons.Rounded.Notifications,
-                    contentDescription = "Notifications",
-                    onClick = {
-                        navController.navigate("connectionRequests")
-                    }
+                StatusCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.BatteryFull,
+                    iconTint = GlimpseGreen,
+                    value = "$batteryLevel%",
+                    label = "Battery"
+                )
+
+                StatusCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.SignalCellularAlt,
+                    iconTint = if (networkStatus == "Offline") {
+                        GlimpseRed
+                    } else {
+                        GlimpseGreen
+                    },
+                    value = networkStatus,
+                    label = "Network"
                 )
             }
 
-            Surface(
+            Spacer(
+                modifier = Modifier.height(15.dp)
+            )
+
+            Row(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(
-                        end = 18.dp,
-                        bottom = 124.dp
-                    )
-                    .shadow(
-                        elevation = 10.dp,
-                        shape = CircleShape
-                    ),
-                shape = CircleShape,
-                color = GlimpseWhite.copy(alpha = 0.97f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(
-                    onClick = {
-                        moveToCurrentLocation()
+
+                ActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Outlined.NearMe,
+                    title = "Share My Location",
+                    subtitle = "Share live location with contacts",
+                    background = GlimpseActionBlueBg,
+                    iconBrush = Brush.linearGradient(
+                        listOf(GlimpseBlue, GlimpseBlueLight)
+                    ),
+                    onClick = onShareLocation
+                )
+
+                ActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.GppMaybe,
+                    title = "Emergency SOS",
+                    subtitle = "Tap and hold to alert contacts",
+                    background = GlimpseRedSoft,
+                    iconBrush = Brush.linearGradient(
+                        listOf(GlimpseRed, Color(0xFFFF7A87))
+                    ),
+                    onClick = onEmergencySos
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
+
+            HomeBottomNavigation(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp),
+                onHome = onHome,
+                onGroups = onGroups,
+                onSafety = onSafety
+            )
+        }
+    }
+}
+
+@Composable
+private fun LocationRow(
+    modifier: Modifier,
+    placeName: String?
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        color = GlimpseRowTint
+    ) {
+
+        Row(
+            modifier = Modifier.padding(
+                horizontal = 14.dp,
+                vertical = 11.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Icon(
+                imageVector = Icons.Rounded.LocationOn,
+                contentDescription = null,
+                tint = GlimpseBlueLight,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(
+                modifier = Modifier.width(12.dp)
+            )
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text = placeName ?: "Current location",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GlimpseNavy,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = if (placeName != null) {
+                        "Current location"
+                    } else {
+                        "Finding your location..."
                     },
-                    modifier = Modifier.size(54.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.LocationOn,
-                        contentDescription = "My location",
-                        tint = GlimpseBlue,
-                        modifier = Modifier.size(25.dp)
-                    )
-                }
+                    fontSize = 13.sp,
+                    color = GlimpseTextGray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = GlimpseNavy,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusCard(
+    modifier: Modifier,
+    icon: ImageVector,
+    iconTint: Color,
+    value: String,
+    label: String
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = GlimpseWhite,
+        shadowElevation = 2.dp
+    ) {
+
+        Row(
+            modifier = Modifier.padding(
+                horizontal = 10.dp,
+                vertical = 10.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(
+                modifier = Modifier.width(8.dp)
+            )
+
+            Column {
+
+                Text(
+                    text = value,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GlimpseNavy,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = label,
+                    fontSize = 12.sp,
+                    color = GlimpseTextGray,
+                    maxLines = 1
+                )
             }
         }
     }
 }
 
 @Composable
-private fun FloatingHomeButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
+private fun ActionCard(
+    modifier: Modifier,
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    background: Color,
+    iconBrush: Brush,
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .size(48.dp)
-            .shadow(
-                elevation = 9.dp,
-                shape = CircleShape
-            ),
-        shape = CircleShape,
-        color = GlimpseWhite.copy(alpha = 0.96f)
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = background
     ) {
-        IconButton(
-            onClick = onClick
+
+        Row(
+            modifier = Modifier.padding(
+                horizontal = 10.dp,
+                vertical = 12.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = GlimpseNavy,
-                modifier = Modifier.size(23.dp)
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(iconBrush),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = GlimpseWhite,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.width(10.dp)
             )
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text = title,
+                    fontSize = 12.5.sp,
+                    lineHeight = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GlimpseNavy,
+                    maxLines = 2
+                )
+
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
+
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    color = GlimpseTextGray,
+                    maxLines = 2
+                )
+            }
         }
     }
 }
 
-@Composable
-private fun CircleSheet(
-    hasConnections: Boolean,
-    onAddPeople: () -> Unit,
-    onOpenConnections: () -> Unit,
-    onOpenGroups: () -> Unit,
-    userLocations: List<UserLocation>,
-    connections: List<ConnectionRequest>
-) {
-    var selectedTab by remember {
-        mutableStateOf(0)
-    }
+/* ─────────────────── BOTTOM NAVIGATION ─────────────────── */
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(
-                start = 20.dp,
-                end = 20.dp,
-                bottom = 16.dp
-            )
+@Composable
+private fun HomeBottomNavigation(
+    modifier: Modifier,
+    onHome: () -> Unit,
+    onGroups: () -> Unit,
+    onSafety: () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(28.dp),
+        color = GlimpseNavTint
     ) {
-        Box(
+
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    top = 10.dp,
-                    bottom = 17.dp
+                    horizontal = 8.dp,
+                    vertical = 8.dp
                 ),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(38.dp)
-                    .height(4.dp)
-                    .background(
-                        Color(0xFFD0D7DC),
-                        RoundedCornerShape(50)
-                    )
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "Your Circle",
-                    fontSize = 23.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GlimpseNavy
-                )
 
-                Spacer(
-                    modifier = Modifier.height(3.dp)
-                )
-
-                Text(
-                    text = if (hasConnections) {
-                        "${
-                            if (selectedTab == 0) {
-                                "People"
-                            } else if (selectedTab == 1) {
-                                "Places"
-                            } else {
-                                "Groups"
-                            }
-                        } in your circle"
-                    } else {
-                        "People who matter. Closer."
-                    },
-                    fontSize = 13.sp,
-                    color = GlimpseTextGray
-                )
-            }
-
-            Surface(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clickable(onClick = onAddPeople),
-                shape = CircleShape,
-                color = GlimpseSoftBlue
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Add,
-                        contentDescription = "Add people",
-                        tint = GlimpseBlue,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(
-            modifier = Modifier.height(18.dp)
-        )
-
-        CircleTabs(
-            selectedTab = selectedTab,
-            onTabSelected = {
-                selectedTab = it
-            }
-        )
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-        when (selectedTab) {
-            0 -> PeopleContent(
-                hasConnections = hasConnections,
-                onAddPeople = onAddPeople,
-                onOpenConnections = onOpenConnections,
-                userLocations = userLocations,
-                connections = connections
+            BottomNavItem(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.Home,
+                label = "Home",
+                selected = true,
+                onClick = onHome
             )
 
-            1 -> PlacesContent()
+            BottomNavItem(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Outlined.Groups,
+                label = "Groups",
+                selected = false,
+                onClick = onGroups
+            )
 
-            2 -> GroupsContent(
-                onOpenGroups = onOpenGroups
+            BottomNavItem(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Outlined.Shield,
+                label = "Safety",
+                selected = false,
+                onClick = onSafety
             )
         }
     }
 }
 
 @Composable
-private fun CircleTabs(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                GlimpseSoftGray,
-                RoundedCornerShape(18.dp)
-            )
-            .padding(4.dp)
-    ) {
-        CircleTab(
-            text = "People",
-            selected = selectedTab == 0,
-            modifier = Modifier.weight(1f),
-            onClick = {
-                onTabSelected(0)
-            }
-        )
-
-        CircleTab(
-            text = "Places",
-            selected = selectedTab == 1,
-            modifier = Modifier.weight(1f),
-            onClick = {
-                onTabSelected(1)
-            }
-        )
-
-        CircleTab(
-            text = "Groups",
-            selected = selectedTab == 2,
-            modifier = Modifier.weight(1f),
-            onClick = {
-                onTabSelected(2)
-            }
-        )
-    }
-}
-
-@Composable
-private fun CircleTab(
-    text: String,
-    selected: Boolean,
+private fun BottomNavItem(
     modifier: Modifier,
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
     onClick: () -> Unit
 ) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(15.dp),
-        color = if (selected) {
-            GlimpseWhite
-        } else {
-            Color.Transparent
-        }
-    ) {
-        Box(
-            modifier = Modifier.padding(
-                vertical = 10.dp
-            ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                fontSize = 13.sp,
-                fontWeight = if (selected) {
-                    FontWeight.SemiBold
-                } else {
-                    FontWeight.Medium
-                },
-                color = if (selected) {
-                    GlimpseBlue
-                } else {
-                    GlimpseTextGray
-                }
+    val tint = if (selected) GlimpseBlue else GlimpseTextGray
+    val shape = RoundedCornerShape(24.dp)
+
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(
+                if (selected) GlimpseBlueSoft.copy(alpha = 0.7f)
+                else Color.Transparent
             )
-        }
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(28.dp)
+        )
+
+        Spacer(
+            modifier = Modifier.height(2.dp)
+        )
+
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = if (selected) {
+                FontWeight.Medium
+            } else {
+                FontWeight.Normal
+            },
+            color = tint
+        )
     }
 }
 
-@Composable
-private fun PeopleContent(
-    hasConnections: Boolean,
-    onAddPeople: () -> Unit,
-    userLocations: List<UserLocation>,
-    onOpenConnections: () -> Unit,
-    connections: List<ConnectionRequest>
-) {
-    if (!hasConnections) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onAddPeople),
-            shape = RoundedCornerShape(22.dp),
-            color = GlimpseSoftBlue
-        ) {
-            Row(
-                modifier = Modifier.padding(
-                    horizontal = 16.dp,
-                    vertical = 16.dp
-                ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = GlimpseWhite
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.PersonAdd,
-                            contentDescription = null,
-                            tint = GlimpseBlue,
-                            modifier = Modifier.size(23.dp)
-                        )
-                    }
-                }
+/* ───────────────────────── HELPERS ───────────────────────── */
 
-                Spacer(
-                    modifier = Modifier.width(13.dp)
-                )
-
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "Add people you trust",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = GlimpseNavy
-                    )
-
-                    Spacer(
-                        modifier = Modifier.height(3.dp)
-                    )
-
-                    Text(
-                        text = "Start building your circle",
-                        fontSize = 12.sp,
-                        color = GlimpseTextGray
-                    )
-                }
-
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = GlimpseTextGray,
-                    modifier = Modifier.size(21.dp)
-                )
-            }
-        }
-    } else {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            connections.forEach { connection ->
-                val personLocation = userLocations.find {
-                    it.uid == connection.senderUid
-                }
-
-                val locationAvailable =
-                    connection.senderSharing.location && personLocation != null
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            Log.d(
-                                "GLIMPSE_CONNECTION",
-                                "Selected ${connection.name} (${connection.senderUid})"
-                            )
-                        }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (connection.profilePhotoUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = connection.profilePhotoUrl,
-                            contentDescription = "Profile photo",
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Surface(
-                            modifier = Modifier.size(48.dp),
-                            shape = CircleShape,
-                            color = GlimpseSoftBlue
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Person,
-                                    contentDescription = null,
-                                    tint = GlimpseBlue,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(
-                        modifier = Modifier.width(13.dp)
-                    )
-
-                    Column {
-                        Text(
-                            text = connection.name,
-                            color = GlimpseNavy,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Text(
-                            text = if (locationAvailable) {
-                                "Location Sharing On"
-                            } else {
-                                "Location Sharing Off"
-                            },
-                            fontSize = 12.sp,
-                            color = GlimpseTextGray
-                        )
-                    }
-                }
-            }
-        }
+private fun getGreeting(): String {
+    return when (
+        java.util.Calendar
+            .getInstance()
+            .get(java.util.Calendar.HOUR_OF_DAY)
+    ) {
+        in 5..11 -> "Good morning,"
+        in 12..16 -> "Good afternoon,"
+        in 17..20 -> "Good evening,"
+        else -> "Good night,"
     }
 }
 
-@Composable
-private fun PlacesContent() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = GlimpseSoftGray
+private fun getGreetingEmoji(): String {
+    return when (
+        java.util.Calendar
+            .getInstance()
+            .get(java.util.Calendar.HOUR_OF_DAY)
     ) {
-        Row(
-            modifier = Modifier.padding(
-                horizontal = 16.dp,
-                vertical = 16.dp
-            ),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                color = GlimpseWhite
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Place,
-                        contentDescription = null,
-                        tint = GlimpseBlue,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            Spacer(
-                modifier = Modifier.width(13.dp)
-            )
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "Saved places",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GlimpseNavy
-                )
-
-                Spacer(
-                    modifier = Modifier.height(3.dp)
-                )
-
-                Text(
-                    text = "Home, College, Work and more",
-                    fontSize = 12.sp,
-                    color = GlimpseTextGray
-                )
-            }
-
-            Icon(
-                imageVector = Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = GlimpseTextGray,
-                modifier = Modifier.size(21.dp)
-            )
-        }
+        in 5..11 -> "☀️"
+        in 12..16 -> "🌤️"
+        in 17..20 -> "🌆"
+        else -> "🌙"
     }
 }
 
-@Composable
-private fun GroupsContent(
-    onOpenGroups: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpenGroups),
-        shape = RoundedCornerShape(22.dp),
-        color = GlimpseSoftGray
-    ) {
-        Row(
-            modifier = Modifier.padding(
-                horizontal = 16.dp,
-                vertical = 16.dp
-            ),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                color = GlimpseSoftBlue
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Groups,
-                        contentDescription = null,
-                        tint = GlimpseBlue,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+private fun getBatteryLevel(
+    context: Context
+): Int {
+    val batteryManager =
+        context.getSystemService(
+            Context.BATTERY_SERVICE
+        ) as BatteryManager
 
-            Spacer(
-                modifier = Modifier.width(13.dp)
-            )
+    return batteryManager
+        .getIntProperty(
+            BatteryManager.BATTERY_PROPERTY_CAPACITY
+        )
+        .coerceIn(0, 100)
+}
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "Create a group",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GlimpseNavy
-                )
+private fun getNetworkStatus(
+    context: Context
+): String {
+    val connectivityManager =
+        context.getSystemService(
+            Context.CONNECTIVITY_SERVICE
+        ) as ConnectivityManager
 
-                Spacer(
-                    modifier = Modifier.height(3.dp)
-                )
+    val network =
+        connectivityManager.activeNetwork
+            ?: return "Offline"
 
-                Text(
-                    text = "Family, Friends, College, Trips",
-                    fontSize = 12.sp,
-                    color = GlimpseTextGray
-                )
-            }
+    val capabilities =
+        connectivityManager
+            .getNetworkCapabilities(network)
+            ?: return "Offline"
 
-            Icon(
-                imageVector = Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = GlimpseTextGray,
-                modifier = Modifier.size(21.dp)
-            )
-        }
+    return when {
+        capabilities.hasTransport(
+            NetworkCapabilities.TRANSPORT_WIFI
+        ) -> "Wi-Fi"
+
+        capabilities.hasTransport(
+            NetworkCapabilities.TRANSPORT_CELLULAR
+        ) -> "Mobile"
+
+        else -> "Connected"
     }
 }
