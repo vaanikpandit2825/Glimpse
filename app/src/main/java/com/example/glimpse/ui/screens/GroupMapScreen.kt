@@ -61,6 +61,7 @@ import org.maplibre.spatialk.geojson.Point
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import com.example.glimpse.model.SharingPermissions
+import com.example.glimpse.util.LocationPlaceUtils
 private val GlimpseBlue = Color(0xFF0077BE)
 
 private fun getLocationStatus(timestamp: Long,refreshTick: Int):String{
@@ -84,7 +85,8 @@ fun GroupMapScreen(
     groupId: String,
     onBack: () -> Unit,
     groupsViewModel: GroupsViewModel = viewModel(),
-    connectionViewModel: ConnectionRequestViewModel = viewModel()
+    connectionViewModel: ConnectionRequestViewModel = viewModel(),
+    onViewMemberProfile: (GroupMember) -> Unit
 ) {
     val repository = remember {
         FirebaseRepository()
@@ -139,6 +141,10 @@ fun GroupMapScreen(
 
     var groupSharingPermissions by remember {
         mutableStateOf<Map<String, SharingPermissions>>(emptyMap())
+    }
+
+    var selectedMemberPlaceName by remember {
+        mutableStateOf<String?>(null)
     }
 
     if (currentUid == null) {
@@ -519,16 +525,13 @@ fun GroupMapScreen(
                     profile=true,
                     locationHistory = false
                 ),
-                placeName = null,
+                placeName = selectedMemberPlaceName,
                 onDismiss = {
                     selectedMember = null
                 },
                 onViewProfile = {
-                    // connect later
+                    onViewMemberProfile(selectedMember!!.member)
                 },
-                onGetDirections = {
-                    // connect later
-                }
             )
         }
 
@@ -567,6 +570,16 @@ fun GroupMapScreen(
                                 selectedMember = item
                                 selectedMemberPermission =
                                     groupSharingPermissions[item.member.uid]
+
+                                selectedMemberPlaceName = null
+
+                                LocationPlaceUtils.getPlaceName(
+                                    context = context,
+                                    latitude = item.location.latitude,
+                                    longitude = item.location.longitude
+                                ) { placeName ->
+                                    selectedMemberPlaceName = placeName
+                                }
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
