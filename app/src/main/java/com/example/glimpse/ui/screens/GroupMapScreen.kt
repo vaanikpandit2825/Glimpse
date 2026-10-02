@@ -112,19 +112,12 @@ fun GroupMapScreen(
         mutableStateOf(emptyList<UserLocation>())
     }
 
-    var connections by remember {
-        mutableStateOf(emptyList<ConnectionRequest>())
-    }
 
     var groupLoaded by remember {
         mutableStateOf(false)
     }
 
     var membersLoaded by remember {
-        mutableStateOf(false)
-    }
-
-    var connectionsLoaded by remember {
         mutableStateOf(false)
     }
 
@@ -138,6 +131,14 @@ fun GroupMapScreen(
 
     var selectedMember by remember {
         mutableStateOf<GroupMapLocation?>(null)
+    }
+
+    var selectedMemberPermission by remember{
+        mutableStateOf<SharingPermissions?>(null)
+    }
+
+    var groupSharingPermissions by remember {
+        mutableStateOf<Map<String, SharingPermissions>>(emptyMap())
     }
 
     if (currentUid == null) {
@@ -174,6 +175,31 @@ fun GroupMapScreen(
                             membersLoaded = true
                         }
                     )
+
+                    selectedGroup.members.keys.forEach { memberUid ->
+                        groupsViewModel.getGroupSharingPermissions(
+                            groupId = selectedGroup.id,
+                            uid = memberUid,
+                            onSuccess = { permissions ->
+                                groupSharingPermissions =
+                                    groupSharingPermissions + (
+                                            memberUid to permissions
+                                            )
+                            },
+                            onFailure = {
+                                groupSharingPermissions =
+                                    groupSharingPermissions + (
+                                            memberUid to SharingPermissions(
+                                                location = false,
+                                                profile = true,
+                                                locationHistory = false
+                                            )
+                                            )
+                            }
+                        )
+                    }
+
+
                 } else {
                     membersLoaded = true
                 }
@@ -181,16 +207,6 @@ fun GroupMapScreen(
             onFailure = {
                 groupLoaded = true
                 membersLoaded = true
-            }
-        )
-
-        connectionViewModel.getConnections(
-            onResult = {
-                connections = it
-                connectionsLoaded = true
-            },
-            onFailure = {
-                connectionsLoaded = true
             }
         )
 
@@ -210,32 +226,20 @@ fun GroupMapScreen(
     val isLoading =
         !groupLoaded ||
                 !membersLoaded ||
-                !connectionsLoaded ||
                 !locationsLoaded
 
     val visibleLocations = remember(
         group,
         members,
         locations,
-        connections,
+        groupSharingPermissions,
         currentUid
-    ) {
-
+    ){
         val currentGroup = group
             ?: return@remember emptyList()
 
         val groupMemberIds =
             currentGroup.members.keys
-
-        val membersSharingLocation =
-            connections
-                .filter {
-                    it.senderSharing.location
-                }
-                .map {
-                    it.senderUid
-                }
-                .toSet()
 
         members.mapNotNull { member ->
 
@@ -251,7 +255,7 @@ fun GroupMapScreen(
 
             val canShowLocation =
                 member.uid == currentUid ||
-                        member.uid in membersSharingLocation
+                        groupSharingPermissions[member.uid]?.location == true
 
             if (!canShowLocation) {
                 return@mapNotNull null
@@ -510,9 +514,9 @@ fun GroupMapScreen(
             MemberLocationSheet(
                 member = selectedMember!!.member,
                 location = selectedMember!!.location,
-                permissions = SharingPermissions(
-                    location = true,
-                    profile = true,
+                permissions = selectedMemberPermission ?: SharingPermissions(
+                    location = false,
+                    profile=true,
                     locationHistory = false
                 ),
                 placeName = null,
@@ -561,6 +565,8 @@ fun GroupMapScreen(
                             .padding(vertical = 6.dp)
                             .clickable {
                                 selectedMember = item
+                                selectedMemberPermission =
+                                    groupSharingPermissions[item.member.uid]
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
