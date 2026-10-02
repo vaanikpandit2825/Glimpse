@@ -687,7 +687,7 @@ private fun BoxScope.HomeBottomSheet(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Rounded.WbSunny,
                     iconTint = GlimpseAmber,
-                    value = "Fetching Weather",
+                    value = "Fetching Data",
                     label = "Weather"
                 )
 
