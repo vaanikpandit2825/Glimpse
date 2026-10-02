@@ -50,8 +50,7 @@ fun MemberLocationSheet(
     permissions: SharingPermissions,
     placeName: String?,
     onDismiss: () -> Unit,
-    onViewProfile: () -> Unit,
-    onGetDirections: () -> Unit
+    onViewProfile: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
@@ -334,32 +333,6 @@ fun MemberLocationSheet(
             Spacer(
                 modifier = Modifier.height(10.dp)
             )
-
-            Button(
-                onClick = onGetDirections,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = GlimpseBlue.copy(alpha = 0.10f),
-                    contentColor = GlimpseBlue
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Directions,
-                    contentDescription = null
-                )
-
-                Spacer(
-                    modifier = Modifier.size(8.dp)
-                )
-
-                Text(
-                    text = "Get directions",
-                    fontWeight = FontWeight.Medium
-                )
-            }
 
             Spacer(
                 modifier = Modifier.height(4.dp)
