@@ -1,3 +1,4 @@
+
 package com.example.glimpse.ui.screens
 
 import android.content.Context
@@ -83,6 +84,13 @@ import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
+import com.example.glimpse.weather.WeatherData
+import com.example.glimpse.weather.WeatherRepository
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 
 private val GlimpseBlue = Color(0xFF4F46E5)
 private val GlimpseBlueLight = Color(0xFF6C7BFF)
@@ -102,6 +110,7 @@ private val GlimpseRed = Color(0xFFFF4D5E)
 private val GlimpseRedSoft = Color(0xFFFFEAEE)
 private val GlimpseBackground = Color(0xFFF8F9FC)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController
@@ -117,7 +126,20 @@ fun HomeScreen(
         FirebaseRepository()
     }
 
+    val weatherRepository = remember {
+        WeatherRepository()
+    }
+
     val cameraState = rememberCameraState()
+
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.Expanded,
+        skipHiddenState = true
+    )
+
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = sheetState
+    )
 
     val currentUser = FirebaseAuth.getInstance().currentUser
 
@@ -153,6 +175,10 @@ fun HomeScreen(
 
     var networkStatus by remember {
         mutableStateOf(getNetworkStatus(context))
+    }
+
+    var weatherState by remember{
+        mutableStateOf<WeatherData?>(null)
     }
 
     LaunchedEffect(Unit) {
@@ -194,12 +220,20 @@ fun HomeScreen(
                 return@getCurrentLocation
             }
 
+
             LocationPlaceUtils.getPlaceName(
                 context = context,
                 latitude = location.latitude,
                 longitude = location.longitude
             ) { result ->
                 placeName = result
+            }
+
+            scope.launch {
+                weatherState = weatherRepository.getCurrentWeather(
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                )
             }
 
             scope.launch {
@@ -216,155 +250,169 @@ fun HomeScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(GlimpseBackground)
-    ) {
-
-        MaplibreMap(
-            modifier = Modifier.fillMaxSize(),
-            baseStyle = BaseStyle.Uri(
-                "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
-            ),
-            cameraState = cameraState
-        ) {
-
-            val myLocation = userLocations.find {
-                it.uid == currentUser?.uid
-            }
-
-            if (myLocation != null) {
-
-                val source = rememberGeoJsonSource(
-                    data = GeoJsonData.Features(
-                        Point(
-                            Position(
-                                myLocation.longitude,
-                                myLocation.latitude
-                            )
-                        )
-                    )
-                )
-
-                // Soft accuracy halo
-                CircleLayer(
-                    id = "home-my-location-halo",
-                    source = source,
-                    radius = const(58.dp),
-                    color = const(
-                        Color(0xFF1976F3)
-                    ),
-                    opacity = const(0.14f)
-                )
-
-                // Location dot
-                CircleLayer(
-                    id = "home-my-location",
-                    source = source,
-                    radius = const(9.dp),
-                    color = const(
-                        Color(0xFF1976F3)
-                    ),
-                    strokeColor = const(Color.White),
-                    strokeWidth = const(3.dp)
-                )
-            }
-        }
-
-        if (!locationPermissionGranted) {
-
-            RequestLocationPermission(
-                onPermissionGranted = {
-
-                    locationPermissionGranted = true
-
-                    locationRepository.getCurrentLocation { location ->
-
-                        if (location == null) {
-                            return@getCurrentLocation
-                        }
-
-                        LocationPlaceUtils.getPlaceName(
-                            context = context,
-                            latitude = location.latitude,
-                            longitude = location.longitude
-                        ) { result ->
-                            placeName = result
-                        }
-
-                        scope.launch {
-                            cameraState.animateTo(
-                                CameraPosition(
-                                    target = Position(
-                                        location.longitude,
-                                        location.latitude
-                                    ),
-                                    zoom = 15.5
-                                )
-                            )
-                        }
-
-                        val uid = currentUser?.uid
-
-                        if (uid == null) {
-                            return@getCurrentLocation
-                        }
-
-                        firebaseRepository.updateLocation(
-                            uid = uid,
-                            latitude = location.latitude,
-                            longitude = location.longitude,
-                            onSuccess = {
-                                firebaseRepository.getUsersLocations { locations ->
-                                    userLocations = locations
-                                }
-                            }
-                        )
-                    }
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetPeekHeight = 100.dp,
+        sheetContainerColor = GlimpseSheet.copy(alpha = 0.97f),
+        sheetShape = RoundedCornerShape(
+            topStart = 32.dp,
+            topEnd = 32.dp
+        ),
+        sheetShadowElevation = 16.dp,
+        sheetContent = {
+            HomeBottomSheet(
+                placeName = placeName,
+                batteryLevel = batteryLevel,
+                networkStatus = networkStatus,
+                weather = weatherState,
+                onShareLocation = {
+                    navController.navigate("connections")
+                },
+                onEmergencySos = {
+                    navController.navigate("safety")
+                },
+                onHome = {},
+                onGroups = {
+                    navController.navigate("groups")
+                },
+                onSafety = {
+                    navController.navigate("safety")
                 }
             )
         }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(GlimpseBackground)
+        ) {
 
-        HomeHeader(
-            userName = userName,
-            profilePhotoUrl = profilePhotoUrl,
-            onNotifications = {
-                navController.navigate("connectionRequests")
-            },
-            onProfile = {
-                navController.navigate("profile")
-            }
-        )
+            MaplibreMap(
+                modifier = Modifier.fillMaxSize(),
+                baseStyle = BaseStyle.Uri(
+                    "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+                ),
+                cameraState = cameraState
+            ) {
 
-        MapControls(
-            onMyLocation = {
-                moveToCurrentLocation()
-            }
-        )
+                val myLocation = userLocations.find {
+                    it.uid == currentUser?.uid
+                }
 
-        HomeBottomSheet(
-            placeName = placeName,
-            batteryLevel = batteryLevel,
-            networkStatus = networkStatus,
-            onShareLocation = {
-                navController.navigate("connections")
-            },
-            onEmergencySos = {
-                navController.navigate("safety")
-            },
-            onHome = {},
-            onGroups = {
-                navController.navigate("groups")
-            },
-            onSafety = {
-                navController.navigate("safety")
+                if (myLocation != null) {
+
+                    val source = rememberGeoJsonSource(
+                        data = GeoJsonData.Features(
+                            Point(
+                                Position(
+                                    myLocation.longitude,
+                                    myLocation.latitude
+                                )
+                            )
+                        )
+                    )
+
+                    // Soft accuracy halo
+                    CircleLayer(
+                        id = "home-my-location-halo",
+                        source = source,
+                        radius = const(58.dp),
+                        color = const(
+                            Color(0xFF1976F3)
+                        ),
+                        opacity = const(0.14f)
+                    )
+
+                    // Location dot
+                    CircleLayer(
+                        id = "home-my-location",
+                        source = source,
+                        radius = const(9.dp),
+                        color = const(
+                            Color(0xFF1976F3)
+                        ),
+                        strokeColor = const(Color.White),
+                        strokeWidth = const(3.dp)
+                    )
+                }
             }
-        )
+
+            if (!locationPermissionGranted) {
+
+                RequestLocationPermission(
+                    onPermissionGranted = {
+
+                        locationPermissionGranted = true
+
+                        locationRepository.getCurrentLocation { location ->
+
+                            if (location == null) {
+                                return@getCurrentLocation
+                            }
+
+                            LocationPlaceUtils.getPlaceName(
+                                context = context,
+                                latitude = location.latitude,
+                                longitude = location.longitude
+                            ) { result ->
+                                placeName = result
+                            }
+
+                            scope.launch {
+                                cameraState.animateTo(
+                                    CameraPosition(
+                                        target = Position(
+                                            location.longitude,
+                                            location.latitude
+                                        ),
+                                        zoom = 15.5
+                                    )
+                                )
+                            }
+
+                            val uid = currentUser?.uid
+
+                            if (uid == null) {
+                                return@getCurrentLocation
+                            }
+
+                            firebaseRepository.updateLocation(
+                                uid = uid,
+                                latitude = location.latitude,
+                                longitude = location.longitude,
+                                onSuccess = {
+                                    firebaseRepository.getUsersLocations { locations ->
+                                        userLocations = locations
+                                    }
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
+            HomeHeader(
+                userName = userName,
+                profilePhotoUrl = profilePhotoUrl,
+                onNotifications = {
+                    navController.navigate("connectionRequests")
+                },
+                onProfile = {
+                    navController.navigate("profile")
+                }
+            )
+
+            MapControls(
+                onMyLocation = {
+                    moveToCurrentLocation()
+                }
+            )
+
+        }
     }
+
 }
 
-/* ───────────────────────── HEADER ───────────────────────── */
 
 @Composable
 private fun BoxScope.HomeHeader(
@@ -617,10 +665,8 @@ private fun MapControlButton(
     }
 }
 
-/* ───────────────────── BOTTOM SHEET ───────────────────── */
-
 @Composable
-private fun BoxScope.HomeBottomSheet(
+private fun HomeBottomSheet(
     placeName: String?,
     batteryLevel: Int,
     networkStatus: String,
@@ -628,139 +674,129 @@ private fun BoxScope.HomeBottomSheet(
     onEmergencySos: () -> Unit,
     onHome: () -> Unit,
     onGroups: () -> Unit,
-    onSafety: () -> Unit
+    onSafety: () -> Unit,
+    weather: WeatherData?,
 ) {
-    Surface(
+    Column(
         modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(
-            topStart = 32.dp,
-            topEnd = 32.dp
-        ),
-        color = GlimpseSheet.copy(alpha = 0.97f),
-        shadowElevation = 16.dp
+            .navigationBarsPadding()
+            .padding(bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Column(
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
+        Box(
             modifier = Modifier
-                .navigationBarsPadding()
-                .padding(bottom = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .width(44.dp)
+                .height(4.dp)
+                .clip(CircleShape)
+                .background(GlimpseHandle)
+        )
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        LocationRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp),
+            placeName = placeName
+        )
+
+        Spacer(
+            modifier = Modifier.height(11.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            Spacer(
-                modifier = Modifier.height(8.dp)
+            StatusCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.WbSunny,
+                iconTint = GlimpseAmber,
+                value = weather?.let{
+                    "${it.temperature}°C"
+                }?:"Fetching",
+                label = "Weather"
             )
 
-            Box(
-                modifier = Modifier
-                    .width(44.dp)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(GlimpseHandle)
+            StatusCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.BatteryFull,
+                iconTint = GlimpseGreen,
+                value = "$batteryLevel%",
+                label = "Battery"
             )
 
-            Spacer(
-                modifier = Modifier.height(10.dp)
-            )
-
-            LocationRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp),
-                placeName = placeName
-            )
-
-            Spacer(
-                modifier = Modifier.height(11.dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-
-                StatusCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.WbSunny,
-                    iconTint = GlimpseAmber,
-                    value = "Fetching Data",
-                    label = "Weather"
-                )
-
-                StatusCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.BatteryFull,
-                    iconTint = GlimpseGreen,
-                    value = "$batteryLevel%",
-                    label = "Battery"
-                )
-
-                StatusCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.SignalCellularAlt,
-                    iconTint = if (networkStatus == "Offline") {
-                        GlimpseRed
-                    } else {
-                        GlimpseGreen
-                    },
-                    value = networkStatus,
-                    label = "Network"
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(15.dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-
-                ActionCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Outlined.NearMe,
-                    title = "Share My Location",
-                    subtitle = "Share live location with contacts",
-                    background = GlimpseActionBlueBg,
-                    iconBrush = Brush.linearGradient(
-                        listOf(GlimpseBlue, GlimpseBlueLight)
-                    ),
-                    onClick = onShareLocation
-                )
-
-                ActionCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.GppMaybe,
-                    title = "Emergency SOS",
-                    subtitle = "Tap and hold to alert contacts",
-                    background = GlimpseRedSoft,
-                    iconBrush = Brush.linearGradient(
-                        listOf(GlimpseRed, Color(0xFFFF7A87))
-                    ),
-                    onClick = onEmergencySos
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(18.dp)
-            )
-
-            HomeBottomNavigation(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                onHome = onHome,
-                onGroups = onGroups,
-                onSafety = onSafety
+            StatusCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.SignalCellularAlt,
+                iconTint = if (networkStatus == "Offline") {
+                    GlimpseRed
+                } else {
+                    GlimpseGreen
+                },
+                value = networkStatus,
+                label = "Network"
             )
         }
+
+        Spacer(
+            modifier = Modifier.height(15.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+
+            ActionCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Outlined.NearMe,
+                title = "Share My Location",
+                subtitle = "Share live location with contacts",
+                background = GlimpseActionBlueBg,
+                iconBrush = Brush.linearGradient(
+                    listOf(GlimpseBlue, GlimpseBlueLight)
+                ),
+                onClick = onShareLocation
+            )
+
+            ActionCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.GppMaybe,
+                title = "Emergency SOS",
+                subtitle = "Tap and hold to alert contacts",
+                background = GlimpseRedSoft,
+                iconBrush = Brush.linearGradient(
+                    listOf(GlimpseRed, Color(0xFFFF7A87))
+                ),
+                onClick = onEmergencySos
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(18.dp)
+        )
+
+        HomeBottomNavigation(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
+            onHome = onHome,
+            onGroups = onGroups,
+            onSafety = onSafety
+        )
     }
 }
 
