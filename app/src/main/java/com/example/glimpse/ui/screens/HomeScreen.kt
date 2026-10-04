@@ -422,7 +422,6 @@ private fun BoxScope.HomeHeader(
     onProfile: () -> Unit
 ) {
     val greeting = getGreeting()
-    val emoji = getGreetingEmoji()
 
     Column(
         modifier = Modifier
@@ -494,7 +493,7 @@ private fun BoxScope.HomeHeader(
         )
 
         Text(
-            text = "$userName $emoji",
+            text = "$userName",
             fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
             color = GlimpseNavy,
@@ -1108,19 +1107,6 @@ private fun getGreeting(): String {
         in 12..16 -> "Good afternoon,"
         in 17..20 -> "Good evening,"
         else -> "Good night,"
-    }
-}
-
-private fun getGreetingEmoji(): String {
-    return when (
-        java.util.Calendar
-            .getInstance()
-            .get(java.util.Calendar.HOUR_OF_DAY)
-    ) {
-        in 5..11 -> "☀️"
-        in 12..16 -> "🌤️"
-        in 17..20 -> "🌆"
-        else -> "🌙"
     }
 }
 
