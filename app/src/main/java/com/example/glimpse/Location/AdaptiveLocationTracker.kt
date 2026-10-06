@@ -2,6 +2,7 @@ package com.example.glimpse.Location
 
 import android.location.Location
 import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.Priority
 
 class AdaptiveLocationTracker(
     private val locationRepository: LocationRepository,
@@ -12,13 +13,17 @@ class AdaptiveLocationTracker(
     private var currentInterval: Long? = null
     private var currentPriority: Int? = null
 
+    private val locationUpdateFilter = LocationUpdateFilter()
+
     fun start(
         batteryLevelProvider: () -> Int,
         onLocationReceived: (Location) -> Unit
     ) {
+        locationUpdateFilter.reset()
+
         requestUpdates(
             intervalMillis = 30_000L,
-            priority = com.google.android.gms.location.Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             batteryLevelProvider = batteryLevelProvider,
             onLocationReceived = onLocationReceived
         )
@@ -41,14 +46,11 @@ class AdaptiveLocationTracker(
             intervalMillis = intervalMillis,
             priority = priority
         ) { location ->
-
             val batteryLevel = batteryLevelProvider()
-
             val strategy = locationEngine.getStrategy(
                 speedMetersPerSecond = location.speed,
                 batteryLevel = batteryLevel
             )
-
             val strategyChanged =
                 strategy.intervalMillis != currentInterval ||
                         strategy.priority != currentPriority
@@ -61,7 +63,9 @@ class AdaptiveLocationTracker(
                     onLocationReceived = onLocationReceived
                 )
             }
-            onLocationReceived(location)
+            if (locationUpdateFilter.shouldUpload(location)) {
+                onLocationReceived(location)
+            }
         }
     }
 
@@ -72,5 +76,6 @@ class AdaptiveLocationTracker(
         currentCallback = null
         currentInterval = null
         currentPriority = null
+        locationUpdateFilter.reset()
     }
 }
