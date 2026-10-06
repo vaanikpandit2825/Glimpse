@@ -1,4 +1,3 @@
-
 package com.example.glimpse.ui.screens
 
 import android.content.BroadcastReceiver
@@ -349,8 +348,6 @@ fun HomeScreen(
                     onProfile = { navController.navigate("profile") }
                 )
 
-                // Anchored just above the sheet's peek, so it can't collide with the
-                // header at any font size. Fades out when the sheet is fully open.
                 AnimatedVisibility(
                     visible = sheetState.targetValue != SheetValue.Expanded,
                     enter = fadeIn(),
@@ -542,7 +539,6 @@ private fun ProfileButton(
     }
 }
 
-/* ─────────────────────────── MAP CONTROLS ─────────────────────────── */
 
 @Composable
 private fun MapControls(
@@ -860,7 +856,7 @@ private fun ActionCard(
     }
 }
 
-/* ───────────────────────── BOTTOM NAVIGATION ───────────────────────── */
+
 
 @Composable
 private fun HomeBottomNavigation(
