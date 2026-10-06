@@ -57,6 +57,8 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.glimpse.BuildConfig
+import com.example.glimpse.Location.AdaptiveLocationEngine
+import com.example.glimpse.Location.AdaptiveLocationTracker
 import com.example.glimpse.Location.LocationRepository
 import com.example.glimpse.Location.RequestLocationPermission
 import com.example.glimpse.firebase.FirebaseRepository
@@ -77,8 +79,6 @@ import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
 
-/* ─────────────────────────── DESIGN TOKENS ─────────────────────────── */
-
 private val GlimpseBlue = Color(0xFF4F46E5)
 private val GlimpseBlueLight = Color(0xFF6C7BFF)
 private val GlimpseViolet = Color(0xFF8B5CF6)
@@ -98,7 +98,6 @@ private val GlimpseBackground = Color(0xFFF8F9FC)
 
 private val LogoBrush = Brush.linearGradient(listOf(GlimpseBlueLight, GlimpseViolet))
 
-// One horizontal margin for the header, the sheet rows, and the nav bar.
 private val ScreenMargin = 16.dp
 private val RowSpacing = 10.dp
 private val CardGap = 8.dp
@@ -106,14 +105,10 @@ private val CardShape = RoundedCornerShape(16.dp)
 private val CardBorder = BorderStroke(1.dp, GlimpseHandle.copy(alpha = 0.55f))
 private val SheetCorner = 28.dp
 
-// Drag handle: 10 dp above + 4 dp bar + 12 dp below.
 private val SheetPeekHeight = 260.dp
 
 private val MapStyleUrl =
-    "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json" +
-            "?key=${BuildConfig.MAPTILER_API_KEY}"
-
-/* ─────────────────────────────── SCREEN ─────────────────────────────── */
+    "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json"+"?key=${BuildConfig.MAPTILER_API_KEY}"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,6 +119,13 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     val locationRepository = remember { LocationRepository(context) }
+    val adaptiveLocationEngine = remember { AdaptiveLocationEngine() }
+    val adaptiveLocationTracker = remember {
+        AdaptiveLocationTracker(
+            locationRepository = locationRepository,
+            locationEngine = adaptiveLocationEngine
+        )
+    }
     val firebaseRepository = remember { FirebaseRepository() }
     val weatherRepository = remember { WeatherRepository() }
 
@@ -165,8 +167,8 @@ fun HomeScreen(
         mutableStateOf(currentUser?.photoUrl?.toString().orEmpty())
     }
 
-    // Live values instead of one-time reads.
     val batteryLevel = rememberBatteryLevel()
+    val currentBatteryLevel = rememberUpdatedState(batteryLevel)
     val networkStatus = rememberNetworkStatus()
 
     val myLocation = remember(userLocations, currentUid) {
@@ -190,8 +192,6 @@ fun HomeScreen(
             userLocations = locations
         }
     }
-
-    // Single path for "get my location, then update everything that depends on it".
     fun refreshLocation(syncToServer: Boolean) {
         locationRepository.getCurrentLocation { location ->
             if (location == null) {
@@ -207,7 +207,6 @@ fun HomeScreen(
             }
 
             scope.launch {
-                // Keep the last known weather if this fetch fails.
                 weatherRepository.getCurrentWeather(
                     latitude = location.latitude,
                     longitude = location.longitude
@@ -238,13 +237,39 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(locationPermissionGranted) {
+    DisposableEffect(locationPermissionGranted) {
         if (locationPermissionGranted) {
-            refreshLocation(syncToServer = true)
+            adaptiveLocationTracker.start(
+                batteryLevelProvider = { currentBatteryLevel.value },
+                onLocationReceived = { location ->
+                    LocationPlaceUtils.getPlaceName(
+                        context = context,
+                        latitude = location.latitude,
+                        longitude = location.longitude
+                    ) { result ->
+                        placeName = result
+                    }
+
+                    if (currentUid != null) {
+                        firebaseRepository.updateLocation(
+                            uid = currentUid,
+                            latitude = location.latitude,
+                            longitude = location.longitude,
+                            onSuccess = {
+                                firebaseRepository.getUsersLocations { locations ->
+                                    userLocations = locations
+                                }
+                            }
+                        )
+                    }
+                }
+            )
+        }
+
+        onDispose {
+            adaptiveLocationTracker.stop()
         }
     }
-
-    // Bottom nav is pinned outside the (scrollable) sheet so it never scrolls away.
     Scaffold(
         containerColor = GlimpseSheet,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -274,7 +299,6 @@ fun HomeScreen(
             sheetShape = RoundedCornerShape(topStart = SheetCorner, topEnd = SheetCorner),
             sheetShadowElevation = 8.dp,
             sheetDragHandle = {
-                // Material's handle keeps the expand/collapse accessibility actions.
                 BottomSheetDefaults.DragHandle(
                     modifier = Modifier.padding(top = 10.dp, bottom = 12.dp),
                     width = 36.dp,
@@ -311,8 +335,6 @@ fun HomeScreen(
                                 Point(Position(myLocation.longitude, myLocation.latitude))
                             )
                         )
-
-                        // Soft accuracy halo
                         CircleLayer(
                             id = "home-my-location-halo",
                             source = source,
@@ -320,8 +342,6 @@ fun HomeScreen(
                             color = const(Color(0xFF1976F3)),
                             opacity = const(0.14f)
                         )
-
-                        // Location dot
                         CircleLayer(
                             id = "home-my-location",
                             source = source,
@@ -368,16 +388,12 @@ fun HomeScreen(
     }
 }
 
-/* ───────────────────────────── HEADER ───────────────────────────── */
-
 @Composable
 private fun BoxScope.HomeHeader(
     userName: String,
     profilePhotoUrl: String,
     onNotifications: () -> Unit,
     onProfile: () -> Unit,
-    // TODO: drive this from real unread state. Defaults to true to match the
-    // previous always-on dot.
     hasUnreadNotifications: Boolean = true
 ) {
     val greeting = remember { getGreeting() }
@@ -386,7 +402,6 @@ private fun BoxScope.HomeHeader(
         modifier = Modifier
             .align(Alignment.TopCenter)
             .fillMaxWidth()
-            // Solid behind the text, fading out quickly so the map stays visible.
             .background(
                 Brush.verticalGradient(
                     0f to GlimpseWhite.copy(alpha = 0.92f),
@@ -434,8 +449,6 @@ private fun BoxScope.HomeHeader(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-
-        // Greeting is secondary; the name carries the weight.
         Text(
             text = greeting,
             fontSize = 14.sp,
@@ -539,7 +552,6 @@ private fun ProfileButton(
     }
 }
 
-
 @Composable
 private fun MapControls(
     onMyLocation: () -> Unit,
@@ -601,8 +613,6 @@ private fun MapControlButton(
     }
 }
 
-/* ───────────────────────────── BOTTOM SHEET ───────────────────────────── */
-
 @Composable
 private fun HomeBottomSheet(
     placeName: String?,
@@ -625,8 +635,6 @@ private fun HomeBottomSheet(
             modifier = Modifier.fillMaxWidth(),
             placeName = placeName
         )
-
-        // Equal-height cards that grow together if text wraps.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -747,7 +755,6 @@ private fun StatusCard(
     Surface(
         modifier = modifier
             .heightIn(min = 60.dp)
-            // TalkBack reads "26%, Battery" as one item.
             .semantics(mergeDescendants = true) {},
         shape = CardShape,
         color = GlimpseWhite,
@@ -856,8 +863,6 @@ private fun ActionCard(
     }
 }
 
-
-
 @Composable
 private fun HomeBottomNavigation(
     modifier: Modifier,
@@ -919,8 +924,6 @@ private fun BottomNavItem(
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // Pill hugs the icon (Material-style) instead of filling a third of the bar.
         Box(
             modifier = Modifier
                 .size(width = 56.dp, height = 28.dp)
@@ -930,7 +933,7 @@ private fun BottomNavItem(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null, // the label already names it
+                contentDescription = null,
                 tint = tint,
                 modifier = Modifier.size(22.dp)
             )
@@ -947,8 +950,6 @@ private fun BottomNavItem(
         )
     }
 }
-
-/* ─────────────────────────── LIVE DEVICE STATE ─────────────────────────── */
 
 private enum class NetworkStatus(val label: String) {
     WIFI("Wi-Fi"),
@@ -1003,8 +1004,6 @@ private fun rememberNetworkStatus(): NetworkStatus {
     return status
 }
 
-/* ───────────────────────────── HELPERS ───────────────────────────── */
-
 private fun getGreeting(): String {
     return when (
         java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -1042,3 +1041,4 @@ private fun getNetworkStatus(context: Context): NetworkStatus {
         ?: return NetworkStatus.OFFLINE
     return capabilities.toNetworkStatus()
 }
+
