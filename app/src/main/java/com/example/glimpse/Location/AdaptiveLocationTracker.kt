@@ -1,3 +1,4 @@
+
 package com.example.glimpse.Location
 
 import android.location.Location
@@ -14,6 +15,7 @@ class AdaptiveLocationTracker(
     private var currentPriority: Int? = null
 
     private val locationUpdateFilter = LocationUpdateFilter()
+    private val locationQualityFilter = LocationQualityFilter()
 
     fun start(
         batteryLevelProvider: () -> Int,
@@ -46,25 +48,31 @@ class AdaptiveLocationTracker(
             intervalMillis = intervalMillis,
             priority = priority
         ) { location ->
-            val batteryLevel = batteryLevelProvider()
-            val strategy = locationEngine.getStrategy(
-                speedMetersPerSecond = location.speed,
-                batteryLevel = batteryLevel
-            )
-            val strategyChanged =
-                strategy.intervalMillis != currentInterval ||
-                        strategy.priority != currentPriority
 
-            if (strategyChanged) {
-                requestUpdates(
-                    intervalMillis = strategy.intervalMillis,
-                    priority = strategy.priority,
-                    batteryLevelProvider = batteryLevelProvider,
-                    onLocationReceived = onLocationReceived
+            if (locationQualityFilter.isValid(location)) {
+                val batteryLevel = batteryLevelProvider()
+
+                val strategy = locationEngine.getStrategy(
+                    speedMetersPerSecond = location.speed,
+                    batteryLevel = batteryLevel
                 )
-            }
-            if (locationUpdateFilter.shouldUpload(location)) {
-                onLocationReceived(location)
+
+                val strategyChanged =
+                    strategy.intervalMillis != currentInterval ||
+                            strategy.priority != currentPriority
+
+                if (strategyChanged) {
+                    requestUpdates(
+                        intervalMillis = strategy.intervalMillis,
+                        priority = strategy.priority,
+                        batteryLevelProvider = batteryLevelProvider,
+                        onLocationReceived = onLocationReceived
+                    )
+                }
+
+                if (locationUpdateFilter.shouldUpload(location)) {
+                    onLocationReceived(location)
+                }
             }
         }
     }
@@ -73,6 +81,7 @@ class AdaptiveLocationTracker(
         currentCallback?.let {
             locationRepository.stopLocationUpdates(it)
         }
+
         currentCallback = null
         currentInterval = null
         currentPriority = null
