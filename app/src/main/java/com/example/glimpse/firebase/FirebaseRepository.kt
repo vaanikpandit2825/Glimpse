@@ -29,11 +29,13 @@ class FirebaseRepository {
 
     private val groupsRef=database.getReference("groups")
 
+
     fun updateLocation(
         uid: String,
         latitude: Double,
         longitude: Double,
-        onSuccess: () -> Unit = {}
+        onSuccess: () -> Unit = {},
+        onFailure: (Exception) -> Unit = {}
     ) {
         val location = hashMapOf(
             "latitude" to latitude,
@@ -48,6 +50,7 @@ class FirebaseRepository {
             .setValue(location)
             .addOnSuccessListener {
                 Log.d("FIREBASE", "LOCATION WRITE SUCCESS")
+                onSuccess()
 
                 locationsRef.child(uid)
                     .get()
@@ -66,13 +69,11 @@ class FirebaseRepository {
                     }
             }
             .addOnFailureListener { error ->
-                Log.e(
-                    "FIREBASE",
-                    "LOCATION WRITE FAILED",
-                    error
-                )
+                Log.e("FIREBASE", "LOCATION WRITE FAILED", error)
+                onFailure(error)
             }
     }
+
 
     fun getUsersLocations(
         onResult: (List<UserLocation>) -> Unit
