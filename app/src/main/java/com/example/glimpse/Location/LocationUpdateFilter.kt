@@ -1,3 +1,4 @@
+
 package com.example.glimpse.Location
 
 import android.location.Location
@@ -11,19 +12,12 @@ class LocationUpdateFilter(
     fun shouldUpload(location: Location): Boolean {
         val previousLocation = lastUploadedLocation
 
-        if (previousLocation == null) {
-            lastUploadedLocation = location
-            return true
-        }
+        return previousLocation == null ||
+                previousLocation.distanceTo(location) > minimumDistanceMeters
+    }
 
-        val distance = previousLocation.distanceTo(location)
-
-        if (distance > minimumDistanceMeters) {
-            lastUploadedLocation = location
-            return true
-        }
-
-        return false
+    fun markUploaded(location: Location) {
+        lastUploadedLocation = Location(location)
     }
 
     fun reset() {
