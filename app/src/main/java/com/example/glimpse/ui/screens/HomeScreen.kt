@@ -131,13 +131,17 @@ fun HomeScreen(
 
     val cameraState = rememberCameraState()
 
+
     val sheetState = rememberStandardBottomSheetState(
         initialValue = SheetValue.PartiallyExpanded,
-        skipHiddenState = true
+        skipHiddenState = false
     )
+
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = sheetState
     )
+
+
 
     val currentUser = remember { FirebaseAuth.getInstance().currentUser }
     val currentUid = currentUser?.uid
@@ -369,7 +373,8 @@ fun HomeScreen(
                 )
 
                 AnimatedVisibility(
-                    visible = sheetState.targetValue != SheetValue.Expanded,
+                    visible = sheetState.targetValue != SheetValue.Expanded &&
+                            sheetState.targetValue != SheetValue.Hidden,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier
@@ -382,6 +387,40 @@ fun HomeScreen(
                     MapControls(
                         onMyLocation = { refreshLocation(syncToServer = false) }
                     )
+                }
+
+                AnimatedVisibility(
+                    visible = sheetState.currentValue == SheetValue.Hidden,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.clickable(
+                            role = Role.Button,
+                            onClick = {
+                                scope.launch {
+                                    sheetState.partialExpand()
+                                }
+                            }
+                        ),
+                        shape = RoundedCornerShape(50),
+                        color = GlimpseWhite,
+                        shadowElevation = 6.dp
+                    ) {
+                        Text(
+                            text = "Show location card  ↑",
+                            modifier = Modifier.padding(
+                                horizontal = 20.dp,
+                                vertical = 12.dp
+                            ),
+                            color = GlimpseNavy,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -682,7 +721,6 @@ private fun HomeBottomSheet(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 icon = Icons.Rounded.GppMaybe,
                 title = "Emergency SOS",
-                subtitle = "Tap and hold to alert contacts",
                 background = GlimpseRedSoft,
                 iconBrush = Brush.linearGradient(listOf(GlimpseRed, Color(0xFFFF7A87))),
                 onClick = onEmergencySos
@@ -1041,4 +1079,5 @@ private fun getNetworkStatus(context: Context): NetworkStatus {
         ?: return NetworkStatus.OFFLINE
     return capabilities.toNetworkStatus()
 }
+
 
