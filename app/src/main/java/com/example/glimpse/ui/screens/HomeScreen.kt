@@ -15,23 +15,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.GpsFixed
-import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.People
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Directions
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
@@ -39,11 +35,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -62,10 +66,7 @@ import com.example.glimpse.groups.GroupsViewModel
 import com.example.glimpse.model.GlimpseGroup
 import com.example.glimpse.model.GroupMember
 import com.example.glimpse.model.UserLocation
-import com.example.glimpse.ui.theme.GlimpseFonts
 import com.example.glimpse.util.LocationPlaceUtils
-import com.example.glimpse.weather.WeatherData
-import com.example.glimpse.weather.WeatherRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import org.maplibre.compose.camera.CameraPosition
@@ -80,45 +81,32 @@ import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
-// Backgrounds
-private val GSurface       = Color(0xFF111114)
-private val GCard          = Color(0xFF1A1A1F)
-private val GElevated      = Color(0xFF22222A)
+private val GPanelBg     = Color(0xFF0E0E10)
+private val GCardBg      = Color(0xFF161618)
+private val GRaisedBg    = Color(0xFF1E1E22)
 
-// Text
-private val GTextPrimary   = Color(0xFFF0EFE8)
-private val GTextSecondary = Color(0xFF787870)
-private val GTextTertiary  = Color(0xFF444440)
+private val GText1       = Color(0xFFF5F4F0)
+private val GText2       = Color(0xFF8A8A8E)
+private val GText3       = Color(0xFF4A4A50)
 
-// Accent — warm amber/gold
-private val GAmber         = Color(0xFFE8B86D)
-private val GAmberSoft     = Color(0xFF2A2218)
+private val GViolet      = Color(0xFF6366F1)
+private val GVioletSoft  = Color(0xFF1E1F3D)
 
-// Status
-private val GLive          = Color(0xFF4CD964)
-private val GRecent        = Color(0xFFFF9500)
-private val GOffline       = Color(0xFF48484A)
+private val GLive        = Color(0xFF30D158)
+private val GRecent      = Color(0xFFFF9F0A)
+private val GOffline     = Color(0xFF3A3A3E)
 
-// Structure
-private val GBorder        = Color(0xFF282830)
-private val GScrim         = Color(0xE0111114)
-private val GMapScrimTop   = Color(0x991A1A1F)
+private val GDanger      = Color(0xFFFF375F)
 
-// New branded tokens
-private val GIndigo        = Color(0xFF4F46E5)
-private val GIndigoSoft    = Color(0xFF1A1850)
-private val GSosRed        = Color(0xFFFF3B30)
-private val GSosRedSoft    = Color(0xFF2A1218)
-private val GShareGreen    = Color(0xFF34C759)
-private val GShareGreenSoft = Color(0xFF122216)
+private val GLine        = Color(0xFF2A2A2E)
+private val GLineStrong  = Color(0xFF3A3A3E)
 
 private val MapStyleUrl =
     "https://api.maptiler.com/maps/01a06f93-3199-72ed-900a-c45024b0e205/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
 
-// ─── Small data class for enriched member+location ─────────────────────────────
+// ─── Data class and helpers ───────────────────────────────────────────────────
 private data class MemberLocation(val member: GroupMember, val location: UserLocation)
 
-// ─── Status helpers ─────────────────────────────────────────────────────────────
 private fun locationStatusLabel(timestamp: Long): String {
     val age = System.currentTimeMillis() - timestamp
     return when {
@@ -129,21 +117,12 @@ private fun locationStatusLabel(timestamp: Long): String {
 }
 
 private fun locationStatusColor(timestamp: Long): Color = when {
-    System.currentTimeMillis() - timestamp < 2 * 60_000L   -> GLive
-    System.currentTimeMillis() - timestamp < 15 * 60_000L  -> GRecent
-    else                                                    -> GOffline
+    System.currentTimeMillis() - timestamp < 2 * 60_000L  -> GLive
+    System.currentTimeMillis() - timestamp < 15 * 60_000L -> GRecent
+    else                                                   -> GOffline
 }
 
-private fun getGreeting(): String {
-    return when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
-        in 5..11  -> "Good morning,"
-        in 12..16 -> "Good afternoon,"
-        in 17..20 -> "Good evening,"
-        else      -> "Good night,"
-    }
-}
-
-// ─── Battery / Network helpers ───────────────────────────────────────────────
+// ─── Battery / Network helpers ────────────────────────────────────────────────
 private enum class NetworkStatus(val label: String) {
     WIFI("Wi-Fi"),
     MOBILE("Mobile"),
@@ -223,7 +202,7 @@ private fun getNetworkStatus(context: Context): NetworkStatus {
     return capabilities.toNetworkStatus()
 }
 
-// ─── Initials avatar fallback ──────────────────────────────────────────────────
+// ─── Initials avatar ──────────────────────────────────────────────────────────
 @Composable
 private fun InitialsAvatar(
     name: String,
@@ -237,10 +216,56 @@ private fun InitialsAvatar(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(GElevated),
+            .background(GRaisedBg),
         contentAlignment = Alignment.Center
     ) {
-        Text(initials, color = GAmber, fontSize = fontSize, fontWeight = FontWeight.SemiBold)
+        Text(initials, color = GViolet, fontSize = fontSize, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+// ─── ConcaveTopShape ──────────────────────────────────────────────────────────
+private class ConcaveTopShape(private val archDepth: Dp) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        val depth = with(density) { archDepth.toPx() }
+        val path = Path()
+        path.moveTo(0f, depth)
+        path.cubicTo(
+            size.width * 0.25f, 0f,
+            size.width * 0.75f, 0f,
+            size.width, depth
+        )
+        path.lineTo(size.width, size.height)
+        path.lineTo(0f, size.height)
+        path.close()
+        return Outline.Generic(path)
+    }
+}
+
+// ─── CurvedPanel ─────────────────────────────────────────────────────────────
+@Composable
+private fun CurvedPanel(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val shape = ConcaveTopShape(archDepth = 18.dp)
+    Box(
+        modifier = modifier
+            .shadow(elevation = 20.dp, shape = shape, clip = false)
+            .clip(shape)
+            .background(GPanelBg)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp)  // offset for arch depth so content starts below the arch
+                .navigationBarsPadding()
+        ) {
+            content()
+        }
     }
 }
 
@@ -260,7 +285,6 @@ fun HomeScreen(navController: NavController) {
         )
     }
     val firebaseRepository = remember { FirebaseRepository() }
-    val weatherRepository  = remember { WeatherRepository() }
     val groupsViewModel: GroupsViewModel = viewModel()
     val cameraState = rememberCameraState()
 
@@ -280,31 +304,33 @@ fun HomeScreen(navController: NavController) {
         )
     }
 
-    var userLocations    by remember { mutableStateOf(emptyList<UserLocation>()) }
-    var userGroups       by remember { mutableStateOf<List<GlimpseGroup>>(emptyList()) }
-    var selectedGroup    by remember { mutableStateOf<GlimpseGroup?>(null) }
-    var groupMembers     by remember { mutableStateOf<List<GroupMember>>(emptyList()) }
+    var userLocations     by remember { mutableStateOf(emptyList<UserLocation>()) }
+    var userGroups        by remember { mutableStateOf<List<GlimpseGroup>>(emptyList()) }
+    var selectedGroupId   by remember { mutableStateOf<String?>(null) }
+    var groupMembers      by remember { mutableStateOf<List<GroupMember>>(emptyList()) }
     var selectedFriendUid by remember { mutableStateOf<String?>(null) }
-    var groupSheetVisible by remember { mutableStateOf(false) }
     var sosDialogVisible  by remember { mutableStateOf(false) }
-    var userName         by remember { mutableStateOf("") }
-    var profilePhotoUrl  by remember { mutableStateOf("") }
-    var placeName        by remember { mutableStateOf<String?>(null) }
-    var weather          by remember { mutableStateOf<WeatherData?>(null) }
+    var userName          by remember { mutableStateOf("") }
+    var profilePhotoUrl   by remember { mutableStateOf("") }
+    var placeName         by remember { mutableStateOf<String?>(null) }
 
     val batteryLevel        = rememberBatteryLevel()
     val currentBatteryLevel = rememberUpdatedState(batteryLevel)
     val networkStatus       = rememberNetworkStatus()
 
+    val selectedGroup = remember(userGroups, selectedGroupId) {
+        if (selectedGroupId == null) null
+        else userGroups.firstOrNull { it.id == selectedGroupId }
+    }
+
     val myLocation = remember(userLocations, currentUid) {
         userLocations.find { it.uid == currentUid }
     }
 
-    // ── Visible + enriched member locations ──────────────────────────────────
     val visibleLocations = remember(userLocations, selectedGroup) {
         if (selectedGroup == null) userLocations
         else {
-            val ids = selectedGroup!!.members.keys
+            val ids = selectedGroup.members.keys
             userLocations.filter { it.uid in ids }
         }
     }
@@ -316,7 +342,6 @@ fun HomeScreen(navController: NavController) {
         }
     }
 
-    // selectedFriendLocation — derived state used in ModalBottomSheet below
     val selectedFriendLocation = remember(memberLocations, selectedFriendUid) {
         memberLocations.firstOrNull { it.member.uid == selectedFriendUid }
     }
@@ -357,7 +382,6 @@ fun HomeScreen(navController: NavController) {
         )
     }
 
-    // ── Auto-center on own location ───────────────────────────────────────────
     LaunchedEffect(myLocation) {
         val loc = myLocation ?: return@LaunchedEffect
         cameraState.animateTo(
@@ -368,7 +392,6 @@ fun HomeScreen(navController: NavController) {
         )
     }
 
-    // ── Refresh location ───────────────────────────────────────────────────────
     fun refreshLocation(syncToServer: Boolean) {
         locationRepository.getCurrentLocation { location ->
             if (location == null) return@getCurrentLocation
@@ -377,12 +400,6 @@ fun HomeScreen(navController: NavController) {
                 latitude  = location.latitude,
                 longitude = location.longitude
             ) { result -> placeName = result }
-            scope.launch {
-                weatherRepository.getCurrentWeather(
-                    latitude  = location.latitude,
-                    longitude = location.longitude
-                )?.let { weather = it }
-            }
             scope.launch {
                 cameraState.animateTo(
                     CameraPosition(
@@ -406,7 +423,6 @@ fun HomeScreen(navController: NavController) {
         }
     }
 
-    // ── Adaptive location tracker ──────────────────────────────────────────────
     DisposableEffect(locationPermissionGranted) {
         if (locationPermissionGranted) {
             adaptiveLocationTracker.start(
@@ -435,556 +451,414 @@ fun HomeScreen(navController: NavController) {
         onDispose { adaptiveLocationTracker.stop() }
     }
 
-    // ── Location permission request ────────────────────────────────────────────
     if (!locationPermissionGranted) {
         RequestLocationPermission(
             onPermissionGranted = { locationPermissionGranted = true }
         )
     }
 
-    // ── Root layout: everything floats over the map ────────────────────────────
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(GSurface)
-    ) {
+    // ── Root layout ──────────────────────────────────────────────────────────
+    Box(Modifier.fillMaxSize().background(GPanelBg)) {
 
-        // ── Layer 1: Map ──────────────────────────────────────────────────────
+        // ── MAP — full screen, behind the panel ──
         MaplibreMap(
-            modifier  = Modifier.fillMaxSize(),
-            baseStyle = BaseStyle.Uri(MapStyleUrl),
+            modifier    = Modifier.fillMaxSize(),
+            baseStyle   = BaseStyle.Uri(MapStyleUrl),
             cameraState = cameraState
         ) {
             visibleLocations.forEach { userLoc ->
-                val uid    = userLoc.uid
-                val isSelf = uid == currentUid
-                val dotColor = when {
-                    isSelf -> GAmber
-                    System.currentTimeMillis() - userLoc.timestamp < 2 * 60_000L   -> GLive
-                    System.currentTimeMillis() - userLoc.timestamp < 15 * 60_000L  -> GRecent
-                    else -> GOffline
+                val uid       = userLoc.uid
+                val isSelf    = uid == currentUid
+                val statusColor = when {
+                    isSelf -> GViolet
+                    System.currentTimeMillis() - userLoc.timestamp < 2 * 60_000L  -> GLive
+                    System.currentTimeMillis() - userLoc.timestamp < 15 * 60_000L -> GRecent
+                    else   -> GOffline
                 }
+                val isSelected = uid == selectedFriendUid
+
                 val source = rememberGeoJsonSource(
                     data = GeoJsonData.Features(
                         Point(Position(userLoc.longitude, userLoc.latitude))
                     )
                 )
-                // Outer glow halo
-                CircleLayer(
-                    id      = "halo-$uid",
-                    source  = source,
-                    radius  = const(22.dp),
-                    color   = const(dotColor.copy(alpha = 0.12f)),
-                    opacity = const(1f)
-                )
-                // Status ring
-                CircleLayer(
-                    id      = "ring-$uid",
-                    source  = source,
-                    radius  = const(13.dp),
-                    color   = const(dotColor.copy(alpha = 0.25f)),
-                    opacity = const(1f)
-                )
-                // Core dot
-                CircleLayer(
-                    id          = "dot-$uid",
-                    source      = source,
-                    radius      = const(7.dp),
-                    color       = const(dotColor),
-                    strokeColor = const(Color(0xFF1A1A1F)),
-                    strokeWidth = const(2.dp)
-                )
-                // Selected ring
-                if (selectedFriendUid == uid) {
+
+                if (isSelected) {
                     CircleLayer(
-                        id      = "sel-ring-$uid",
+                        id      = "sel-$uid",
                         source  = source,
-                        radius  = const(18.dp),
-                        color   = const(dotColor.copy(alpha = 0.35f)),
+                        radius  = const(16.dp),
+                        color   = const(statusColor.copy(alpha = 0.2f)),
                         opacity = const(1f)
                     )
                 }
+                CircleLayer(
+                    id          = "dot-$uid",
+                    source      = source,
+                    radius      = const(6.dp),
+                    color       = const(statusColor),
+                    strokeColor = const(Color(0xFF0E0E10)),
+                    strokeWidth = const(2.5.dp)
+                )
             }
         }
 
-        // Dim overlay when a friend is selected
-        if (selectedFriendUid != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.25f))
-            )
-        }
-
-        // ── Layer 2: Transparent tap-dismisser ───────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    indication      = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    selectedFriendUid = null
-                    groupSheetVisible = false
-                }
-        )
-
-        // ── Layer 3: Unified Top Bar ──────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Group pill chip
-            Surface(
-                shape          = RoundedCornerShape(10.dp),
-                color          = GCard,
-                border         = BorderStroke(1.dp, GBorder),
-                shadowElevation = 3.dp,
-                modifier       = Modifier.clickable(
-                    indication        = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { groupSheetVisible = true }
-            ) {
-                Row(
-                    modifier            = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                    verticalAlignment   = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .clip(CircleShape)
-                            .background(GIndigo)
-                    )
-                    Text(
-                        text       = selectedGroup?.name ?: "Everyone",
-                        color      = GTextPrimary,
-                        fontSize   = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines   = 1,
-                        overflow   = TextOverflow.Ellipsis
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(GIndigoSoft)
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text       = "${visibleLocations.size}",
-                            color      = GIndigo,
-                            fontSize   = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Icon(
-                        imageVector   = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint          = GTextSecondary,
-                        modifier      = Modifier.size(14.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Notification + Profile circles
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Notifications
-                Surface(
-                    shape           = CircleShape,
-                    color           = GCard,
-                    border          = BorderStroke(1.dp, GBorder),
-                    shadowElevation = 3.dp
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clickable(
-                                indication        = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) { navController.navigate("connectionRequests") },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector        = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications",
-                            tint               = GTextPrimary,
-                            modifier           = Modifier.size(18.dp)
-                        )
-                        // Unread dot
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 9.dp, end = 9.dp)
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(GIndigo)
-                        )
-                    }
-                }
-                // Profile
-                Surface(
-                    shape           = CircleShape,
-                    color           = GCard,
-                    border          = BorderStroke(1.dp, GBorder),
-                    shadowElevation = 3.dp
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clickable(
-                                indication        = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) { navController.navigate("profile") },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (profilePhotoUrl.isNotBlank()) {
-                            AsyncImage(
-                                model              = profilePhotoUrl,
-                                contentDescription = "Profile",
-                                modifier           = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape),
-                                contentScale       = ContentScale.Crop
-                            )
-                        } else {
-                            InitialsAvatar(
-                                name     = userName.ifBlank { "?" },
-                                size     = 38.dp,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── Layer 4: GPS FAB ──────────────────────────────────────────────────
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = 16.dp, bottom = 175.dp)
-        ) {
-            Surface(
-                shape           = CircleShape,
-                color           = GCard,
-                border          = BorderStroke(1.dp, GBorder),
-                shadowElevation = 4.dp
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clickable(
-                            indication        = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { refreshLocation(syncToServer = false) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector        = Icons.Outlined.GpsFixed,
-                        contentDescription = "Recenter",
-                        tint               = GAmber,
-                        modifier           = Modifier.size(19.dp)
-                    )
-                }
-            }
-        }
-
-        // ── Layer 5: Bottom Persistent Column ─────────────────────────────────
-        Column(
+        // ── CURVED PANEL — bottom 40% ──
+        CurvedPanel(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxHeight(fraction = 0.40f)
         ) {
+            // Group filter chips row
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    // "All" chip
+                    val isAllSelected = selectedGroupId == null
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isAllSelected) GVioletSoft else GRaisedBg)
+                            .border(1.dp, GLine, RoundedCornerShape(6.dp))
+                            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                selectedGroupId = null
+                                groupMembers = emptyList()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "All",
+                            color = if (isAllSelected) GViolet else GText2,
+                            fontSize = 12.sp,
+                            fontWeight = if (isAllSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+                items(userGroups) { group ->
+                    val isGroupSelected = selectedGroupId == group.id
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isGroupSelected) GVioletSoft else GRaisedBg)
+                            .border(1.dp, GLine, RoundedCornerShape(6.dp))
+                            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                selectedGroupId = group.id
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = group.name,
+                            color = if (isGroupSelected) GViolet else GText2,
+                            fontSize = 12.sp,
+                            fontWeight = if (isGroupSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
 
-            // Zone A: People strip (only when there are members)
-            if (memberLocations.isNotEmpty()) {
+            // People rail — takes remaining panel height
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+            ) {
+                // Self card first
+                val selfLoc = visibleLocations.firstOrNull { it.uid == currentUid }
+                if (selfLoc != null) {
+                    item(key = "self") {
+                        val selfMember = GroupMember(
+                            uid = currentUid ?: "",
+                            name = userName,
+                            profilePhotoUrl = profilePhotoUrl
+                        )
+                        PersonCard(
+                            memberLoc = MemberLocation(selfMember, selfLoc),
+                            isSelected = selectedFriendUid == currentUid,
+                            isSelf = true,
+                            onTap = { navController.navigate("connections") },
+                            navController = navController,
+                            modifier = Modifier.fillParentMaxHeight()
+                        )
+                    }
+                }
+
+                // Friends
+                val filteredMembers = memberLocations.filter { it.member.uid != currentUid }
+                items(filteredMembers, key = { it.member.uid }) { ml ->
+                    PersonCard(
+                        memberLoc = ml,
+                        isSelected = selectedFriendUid == ml.member.uid,
+                        isSelf = false,
+                        onTap = {
+                            selectedFriendUid = ml.member.uid
+                            scope.launch {
+                                cameraState.animateTo(
+                                    CameraPosition(
+                                        target = Position(ml.location.longitude, ml.location.latitude),
+                                        zoom   = 15.0
+                                    )
+                                )
+                            }
+                        },
+                        navController = navController,
+                        modifier = Modifier.fillParentMaxHeight()
+                    )
+                }
+
+                // Empty state
+                if (selfLoc == null && filteredMembers.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxHeight()
+                                .width(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No one here yet", color = GText3, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── GPS FAB — above the panel ──
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(end = 14.dp, bottom = 250.dp),
+            shape = CircleShape,
+            color = GPanelBg,
+            border = BorderStroke(1.dp, GLine),
+            shadowElevation = 3.dp
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                        refreshLocation(syncToServer = false)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = Icons.Outlined.GpsFixed,
+                    contentDescription = "Recenter",
+                    tint               = GViolet,
+                    modifier           = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // ── TOP CONTROLS — float over map ──
+        // Filter chip — top left
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(start = 14.dp, top = 10.dp)
+                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { /* filter tap: no-op, inline chip row handles it */ },
+            shape = RoundedCornerShape(8.dp),
+            color = GPanelBg,
+            border = BorderStroke(1.dp, GLine),
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(6.dp).clip(CircleShape).background(GViolet)
+                )
+                Text(
+                    text = selectedGroup?.name ?: "Everyone",
+                    color = GText1,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(GCard.copy(alpha = 0.95f))
-                        .border(1.dp, GBorder, RoundedCornerShape(14.dp))
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(GVioletSoft)
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
                 ) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(memberLocations.take(6)) { memberLoc ->
-                            PeopleStripAvatar(
-                                memberLoc  = memberLoc,
-                                isSelected = memberLoc.member.uid == selectedFriendUid,
-                                isSelf     = memberLoc.member.uid == currentUid,
-                                onClick    = {
-                                    selectedFriendUid = memberLoc.member.uid
-                                    scope.launch {
-                                        cameraState.animateTo(
-                                            CameraPosition(
-                                                target = Position(
-                                                    memberLoc.location.longitude,
-                                                    memberLoc.location.latitude
-                                                ),
-                                                zoom = 15.0
-                                            )
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                        if (memberLocations.size > 6) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(GElevated),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text       = "+${memberLocations.size - 6}",
-                                        color      = GTextSecondary,
-                                        fontSize   = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Zone B: Action Row
-            Row(
-                modifier              = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Share Location chip
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape    = RoundedCornerShape(12.dp),
-                    color    = GShareGreenSoft,
-                    border   = BorderStroke(1.dp, GShareGreen.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .clickable(
-                                indication        = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) { navController.navigate("connections") }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector        = Icons.Outlined.NearMe,
-                            contentDescription = "Share location",
-                            tint               = GShareGreen,
-                            modifier           = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text       = "Share Location",
-                            color      = GTextPrimary,
-                            fontSize   = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines   = 1
-                        )
-                    }
-                }
-                // Emergency SOS chip
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape    = RoundedCornerShape(12.dp),
-                    color    = GSosRedSoft,
-                    border   = BorderStroke(1.dp, GSosRed.copy(alpha = 0.35f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .clickable(
-                                indication        = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) { sosDialogVisible = true }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector        = Icons.Rounded.Warning,
-                            contentDescription = "Emergency SOS",
-                            tint               = GSosRed,
-                            modifier           = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text       = "Emergency SOS",
-                            color      = GTextPrimary,
-                            fontSize   = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines   = 1
-                        )
-                    }
-                }
-            }
-
-            // Zone C: Bottom Nav Tabs
-            Surface(
-                modifier        = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape           = RoundedCornerShape(14.dp),
-                color           = GCard,
-                border          = BorderStroke(1.dp, GBorder),
-                shadowElevation = 6.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                ) {
-                    BottomNavItem(
-                        icon     = Icons.Rounded.Map,
-                        label    = "Map",
-                        selected = true,
-                        onClick  = { /* already on home */ },
-                        modifier = Modifier.weight(1f)
-                    )
-                    BottomNavItem(
-                        icon     = Icons.Outlined.Groups,
-                        label    = "Groups",
-                        selected = false,
-                        onClick  = { navController.navigate("groups") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    BottomNavItem(
-                        icon     = Icons.Outlined.People,
-                        label    = "Connect",
-                        selected = false,
-                        onClick  = { navController.navigate("connections") },
-                        modifier = Modifier.weight(1f)
+                    Text(
+                        text = "${visibleLocations.size}",
+                        color = GViolet,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
 
-        // ── Layer 6: Friend Detail Sheet ──────────────────────────────────────
+        // Action buttons — top right
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(end = 14.dp, top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // SOS
+            Surface(
+                shape = CircleShape,
+                color = GPanelBg,
+                border = BorderStroke(1.dp, GLine),
+                shadowElevation = 2.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                            sosDialogVisible = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector        = Icons.Rounded.Warning,
+                        contentDescription = "SOS",
+                        tint               = GDanger,
+                        modifier           = Modifier.size(17.dp)
+                    )
+                }
+            }
+            // Notifications
+            Surface(
+                shape = CircleShape,
+                color = GPanelBg,
+                border = BorderStroke(1.dp, GLine),
+                shadowElevation = 2.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                            navController.navigate("connectionRequests")
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector        = Icons.Outlined.Notifications,
+                        contentDescription = "Notifications",
+                        tint               = GText1,
+                        modifier           = Modifier.size(17.dp)
+                    )
+                    // Indicator dot
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 8.dp, end = 8.dp)
+                            .size(5.dp)
+                            .clip(CircleShape)
+                            .background(GViolet)
+                    )
+                }
+            }
+            // Profile
+            Surface(
+                shape = CircleShape,
+                color = GPanelBg,
+                border = BorderStroke(1.dp, GLine),
+                shadowElevation = 2.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                            navController.navigate("profile")
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (profilePhotoUrl.isNotBlank()) {
+                        AsyncImage(
+                            model              = profilePhotoUrl,
+                            contentDescription = "Profile",
+                            modifier           = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale       = ContentScale.Crop
+                        )
+                    } else {
+                        InitialsAvatar(name = userName.ifBlank { "?" }, size = 36.dp, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+
+        // ── FRIEND DETAIL SHEET ──
         if (selectedFriendLocation != null) {
             ModalBottomSheet(
                 onDismissRequest = { selectedFriendUid = null },
                 sheetState       = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                containerColor   = GCard,
-                shape            = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-                dragHandle       = {
+                containerColor   = GPanelBg,
+                shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                dragHandle = {
                     Box(
-                        modifier         = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp, bottom = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(width = 32.dp, height = 3.dp)
-                                .background(GBorder, RoundedCornerShape(2.dp))
+                                .size(width = 28.dp, height = 3.dp)
+                                .background(GLineStrong, RoundedCornerShape(2.dp))
                         )
                     }
                 }
             ) {
                 FriendDetailSheetContent(
-                    memberLoc  = selectedFriendLocation,
-                    currentUid = currentUid,
-                    onClose    = { selectedFriendUid = null },
+                    memberLoc     = selectedFriendLocation,
+                    onClose       = { selectedFriendUid = null },
                     navController = navController
                 )
             }
         }
 
-        // ── Layer 7: Group Switcher Sheet ─────────────────────────────────────
-        if (groupSheetVisible) {
-            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-            ModalBottomSheet(
-                onDismissRequest = { groupSheetVisible = false },
-                sheetState       = sheetState,
-                containerColor   = GCard,
-                shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                dragHandle       = {
-                    Box(
-                        modifier         = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(width = 32.dp, height = 3.dp)
-                                .background(GBorder, RoundedCornerShape(2.dp))
-                        )
-                    }
-                }
-            ) {
-                GroupSheetContent(
-                    userGroups   = userGroups,
-                    selectedGroup = selectedGroup,
-                    visibleCount = visibleLocations.size,
-                    onSelect     = { group ->
-                        selectedGroup = group
-                        groupSheetVisible = false
-                    },
-                    onDismiss    = { groupSheetVisible = false }
-                )
-            }
-        }
-
-        // ── Layer 8: SOS AlertDialog ──────────────────────────────────────────
+        // ── SOS DIALOG ──
         if (sosDialogVisible) {
             AlertDialog(
                 onDismissRequest = { sosDialogVisible = false },
-                containerColor   = GCard,
+                containerColor   = GPanelBg,
                 shape            = RoundedCornerShape(20.dp),
-                icon             = {
+                icon = {
                     Icon(
                         imageVector        = Icons.Rounded.Warning,
-                        tint               = GSosRed,
+                        tint               = GDanger,
                         contentDescription = null,
                         modifier           = Modifier.size(32.dp)
                     )
                 },
                 title = {
-                    Text(
-                        text       = "Emergency SOS",
-                        color      = GTextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize   = 18.sp
-                    )
+                    Text("Emergency SOS", color = GText1, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 },
                 text = {
                     Text(
-                        text     = "Share your location with your connections immediately?",
-                        color    = GTextSecondary,
+                        "Share your location with your connections immediately?",
+                        color = GText2,
                         fontSize = 14.sp
                     )
                 },
                 confirmButton = {
                     Button(
-                        onClick = {
-                            sosDialogVisible = false
-                            navController.navigate("connections")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = GSosRed),
-                        shape  = RoundedCornerShape(10.dp)
+                        onClick = { sosDialogVisible = false; navController.navigate("connections") },
+                        colors  = ButtonDefaults.buttonColors(containerColor = GDanger),
+                        shape   = RoundedCornerShape(10.dp)
                     ) {
                         Text("Send SOS", fontWeight = FontWeight.SemiBold)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { sosDialogVisible = false }) {
-                        Text("Cancel", color = GTextSecondary)
+                        Text("Cancel", color = GText2)
                     }
                 }
             )
@@ -992,111 +866,119 @@ fun HomeScreen(navController: NavController) {
     }
 }
 
-// ─── PeopleStripAvatar ────────────────────────────────────────────────────────
+// ─── PersonCard ───────────────────────────────────────────────────────────────
 @Composable
-private fun PeopleStripAvatar(
+private fun PersonCard(
     memberLoc: MemberLocation,
     isSelected: Boolean,
     isSelf: Boolean,
-    onClick: () -> Unit
-) {
-    val statusColor = locationStatusColor(memberLoc.location.timestamp)
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clickable(
-                indication        = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        val borderModifier = when {
-            isSelected -> Modifier.border(2.dp, GAmber, CircleShape)
-            isSelf     -> Modifier.border(1.5.dp, GAmber.copy(alpha = 0.4f), CircleShape)
-            else       -> Modifier.border(1.dp, GBorder, CircleShape)
-        }
-        Box {
-            if (memberLoc.member.profilePhotoUrl.isNotBlank()) {
-                AsyncImage(
-                    model              = memberLoc.member.profilePhotoUrl,
-                    contentDescription = memberLoc.member.name,
-                    modifier           = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .then(borderModifier),
-                    contentScale       = ContentScale.Crop
-                )
-            } else {
-                InitialsAvatar(
-                    name     = memberLoc.member.name,
-                    size     = 40.dp,
-                    fontSize = 14.sp,
-                    modifier = borderModifier
-                )
-            }
-            // Status dot in bottom-right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(9.dp)
-                    .clip(CircleShape)
-                    .background(GCard)
-                    .padding(1.5.dp)
-                    .clip(CircleShape)
-                    .background(statusColor)
-            )
-        }
-    }
-}
-
-// ─── BottomNavItem ────────────────────────────────────────────────────────────
-@Composable
-private fun BottomNavItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
+    onTap: () -> Unit,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    val statusColor = if (isSelf) GViolet
+        else locationStatusColor(memberLoc.location.timestamp)
+    val statusLabel = if (isSelf) "You"
+        else locationStatusLabel(memberLoc.location.timestamp)
+
+    Surface(
         modifier = modifier
-            .fillMaxHeight()
-            .clickable(
-                indication        = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .width(140.dp)
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onTap() },
+        shape = RoundedCornerShape(16.dp),
+        color = GCardBg,
+        border = if (isSelected) BorderStroke(1.dp, GViolet.copy(alpha = 0.6f))
+                 else BorderStroke(1.dp, GLine),
+        shadowElevation = if (isSelected) 8.dp else 2.dp
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .size(width = 32.dp, height = 20.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(if (selected) GIndigoSoft else Color.Transparent),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector        = icon,
-                contentDescription = label,
-                tint               = if (selected) GIndigo else GTextSecondary,
-                modifier           = Modifier.size(20.dp)
-            )
+            // Top: avatar + name + status
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Avatar with status dot overlay
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, if (isSelected) statusColor else GLine, CircleShape)
+                    ) {
+                        if (memberLoc.member.profilePhotoUrl.isNotBlank()) {
+                            AsyncImage(
+                                model              = memberLoc.member.profilePhotoUrl,
+                                contentDescription = null,
+                                modifier           = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale       = ContentScale.Crop
+                            )
+                        } else {
+                            InitialsAvatar(
+                                name     = memberLoc.member.name,
+                                size     = 52.dp,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                    // Status dot
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .offset(x = 2.dp, y = 2.dp)
+                            .clip(CircleShape)
+                            .background(GPanelBg)
+                            .padding(2.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+                }
+
+                // Name
+                Text(
+                    text       = memberLoc.member.name.ifBlank { "Unknown" },
+                    color      = GText1,
+                    fontSize   = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines   = 1,
+                    overflow   = TextOverflow.Ellipsis
+                )
+
+                // Status
+                Text(
+                    text       = statusLabel,
+                    color      = statusColor,
+                    fontSize   = 11.sp,
+                    maxLines   = 1
+                )
+            }
+
+            // Bottom: self gets a Share button, others get nothing
+            if (isSelf) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(GVioletSoft)
+                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                            navController.navigate("connections")
+                        }
+                        .padding(vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Share", color = GViolet, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text       = label,
-            color      = if (selected) GIndigo else GTextSecondary,
-            fontSize   = 10.sp,
-            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
-        )
     }
 }
 
 // ─── FriendDetailSheetContent ─────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FriendDetailSheetContent(
     memberLoc: MemberLocation,
-    currentUid: String?,
     onClose: () -> Unit,
     navController: NavController
 ) {
@@ -1113,52 +995,54 @@ private fun FriendDetailSheetContent(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
+            .padding(horizontal = 22.dp, vertical = 0.dp)
+            .padding(bottom = 32.dp)
     ) {
-        // Header: avatar + name/status + close button
+        // Header row: avatar + name/status + close
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier          = Modifier.fillMaxWidth()
         ) {
-            // 56dp avatar with status color ring
-            Box(modifier = Modifier.size(60.dp), contentAlignment = Alignment.Center) {
+            // 64dp avatar
+            Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
                 if (memberLoc.member.profilePhotoUrl.isNotBlank()) {
                     AsyncImage(
                         model              = memberLoc.member.profilePhotoUrl,
                         contentDescription = memberLoc.member.name,
                         modifier           = Modifier
-                            .size(56.dp)
+                            .size(60.dp)
                             .clip(CircleShape)
-                            .border(2.dp, statusColor, CircleShape),
+                            .border(2.5.dp, statusColor, CircleShape),
                         contentScale       = ContentScale.Crop
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(60.dp)
                             .clip(CircleShape)
-                            .border(2.dp, statusColor, CircleShape)
+                            .border(2.5.dp, statusColor, CircleShape)
                     ) {
                         InitialsAvatar(
                             name     = memberLoc.member.name,
-                            size     = 56.dp,
-                            fontSize = 18.sp
+                            size     = 60.dp,
+                            fontSize = 20.sp
                         )
                     }
                 }
             }
+
             Spacer(Modifier.width(14.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text       = memberLoc.member.name,
-                    color      = GTextPrimary,
-                    fontSize   = 20.sp,
+                    color      = GText1,
+                    fontSize   = 22.sp,
                     fontWeight = FontWeight.SemiBold,
-                    fontFamily = GlimpseFonts.PlayfairDisplay,
                     maxLines   = 1,
                     overflow   = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(3.dp))
                 Row(
                     verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1171,38 +1055,37 @@ private fun FriendDetailSheetContent(
                     )
                     Text(
                         text     = locationStatusLabel(memberLoc.location.timestamp),
-                        color    = GTextSecondary,
+                        color    = GText2,
                         fontSize = 13.sp
                     )
                 }
             }
+
             Spacer(Modifier.width(8.dp))
+
             // Close button
             Box(
                 modifier = Modifier
-                    .size(30.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
-                    .background(GElevated)
-                    .clickable(
-                        indication        = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { onClose() },
+                    .background(GRaisedBg)
+                    .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onClose() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector        = Icons.Rounded.Close,
                     contentDescription = "Close",
-                    tint               = GTextSecondary,
-                    modifier           = Modifier.size(15.dp)
+                    tint               = GText2,
+                    modifier           = Modifier.size(14.dp)
                 )
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        Divider(color = GBorder)
+        Spacer(Modifier.height(16.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(GLineStrong.copy(alpha = 0.5f)))
         Spacer(Modifier.height(16.dp))
 
-        // Location info row
+        // Location freshness row
         Row(
             modifier          = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -1210,228 +1093,90 @@ private fun FriendDetailSheetContent(
             Icon(
                 imageVector        = Icons.Rounded.LocationOn,
                 contentDescription = null,
-                tint               = GTextSecondary,
-                modifier           = Modifier.size(16.dp)
+                tint               = GText3,
+                modifier           = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(6.dp))
             Text(
                 text     = locationStatusLabel(memberLoc.location.timestamp),
-                color    = GTextSecondary,
+                color    = GText2,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f)
             )
-            // Freshness chip
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (isLive) GLive.copy(alpha = 0.15f) else GElevated)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(if (isLive) GLive.copy(alpha = 0.12f) else GRaisedBg)
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
                 Text(
                     text       = freshnessLabel,
-                    color      = if (isLive) GLive else GTextSecondary,
+                    color      = if (isLive) GLive else GText2,
                     fontSize   = 11.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
         // Action buttons row
         Row(
             modifier              = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(
-                onClick  = {
-                    navController.navigate("connections")
-                    onClose()
-                },
-                modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(10.dp),
-                border   = BorderStroke(1.dp, GBorder),
-                colors   = ButtonDefaults.outlinedButtonColors(containerColor = GElevated)
-            ) {
-                Icon(
-                    imageVector        = Icons.Outlined.NearMe,
-                    contentDescription = null,
-                    tint               = GIndigo,
-                    modifier           = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Message", fontSize = 13.sp, color = GTextPrimary)
-            }
-            OutlinedButton(
-                onClick  = { /* directions: external map intent would go here */ },
-                modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(10.dp),
-                border   = BorderStroke(1.dp, GBorder),
-                colors   = ButtonDefaults.outlinedButtonColors(containerColor = GElevated)
-            ) {
-                Icon(
-                    imageVector        = Icons.Rounded.Directions,
-                    contentDescription = null,
-                    tint               = GTextSecondary,
-                    modifier           = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Directions", fontSize = 13.sp, color = GTextPrimary)
-            }
-            OutlinedButton(
-                onClick  = {
-                    navController.navigate("profile")
-                    onClose()
-                },
-                modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(10.dp),
-                border   = BorderStroke(1.dp, GBorder),
-                colors   = ButtonDefaults.outlinedButtonColors(containerColor = GElevated)
-            ) {
-                Icon(
-                    imageVector        = Icons.Rounded.Person,
-                    contentDescription = null,
-                    tint               = GTextSecondary,
-                    modifier           = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Profile", fontSize = 13.sp, color = GTextPrimary)
-            }
+            DetailActionButton(
+                label   = "Message",
+                icon    = Icons.Outlined.NearMe,
+                tint    = GViolet,
+                onClick = { navController.navigate("connections"); onClose() },
+                modifier = Modifier.weight(1f)
+            )
+            DetailActionButton(
+                label   = "Directions",
+                icon    = Icons.Rounded.Directions,
+                tint    = GText2,
+                onClick = {},
+                modifier = Modifier.weight(1f)
+            )
+            DetailActionButton(
+                label   = "Profile",
+                icon    = Icons.Rounded.Person,
+                tint    = GText2,
+                onClick = { navController.navigate("profile"); onClose() },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
-// ─── GroupSheetContent ────────────────────────────────────────────────────────
+// ─── DetailActionButton ───────────────────────────────────────────────────────
 @Composable
-private fun GroupSheetContent(
-    userGroups: List<GlimpseGroup>,
-    selectedGroup: GlimpseGroup?,
-    visibleCount: Int,
-    onSelect: (GlimpseGroup?) -> Unit,
-    onDismiss: () -> Unit
+private fun DetailActionButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column {
-        Text(
-            text       = "Switch Group",
-            color      = GTextPrimary,
-            fontSize   = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier   = Modifier.padding(start = 20.dp, top = 4.dp, bottom = 16.dp)
-        )
-
-        LazyColumn {
-            // "Everyone" tile
-            item {
-                val isSelected = selectedGroup == null
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) GAmberSoft else GElevated)
-                        .border(
-                            1.dp,
-                            if (isSelected) GAmber.copy(alpha = 0.4f) else GBorder,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .clickable(
-                            indication        = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { onSelect(null) }
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(if (isSelected) GAmber else GTextSecondary)
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text       = "Everyone",
-                            color      = GTextPrimary,
-                            fontSize   = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier   = Modifier.weight(1f)
-                        )
-                        Text(
-                            text     = "$visibleCount",
-                            color    = GTextSecondary,
-                            fontSize = 13.sp
-                        )
-                        if (isSelected) {
-                            Spacer(Modifier.width(8.dp))
-                            Icon(
-                                imageVector        = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint               = GAmber,
-                                modifier           = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            items(userGroups) { group ->
-                val isSelected = selectedGroup?.id == group.id
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) GAmberSoft else GElevated)
-                        .border(
-                            1.dp,
-                            if (isSelected) GAmber.copy(alpha = 0.4f) else GBorder,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .clickable(
-                            indication        = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { onSelect(group) }
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(if (isSelected) GAmber else GTextSecondary)
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text       = group.name,
-                            color      = GTextPrimary,
-                            fontSize   = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier   = Modifier.weight(1f)
-                        )
-                        Text(
-                            text     = "${group.members.size}",
-                            color    = GTextSecondary,
-                            fontSize = 13.sp
-                        )
-                        if (isSelected) {
-                            Spacer(Modifier.width(8.dp))
-                            Icon(
-                                imageVector        = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint               = GAmber,
-                                modifier           = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            item {
-                Spacer(
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .padding(bottom = 16.dp)
-                )
-            }
+    OutlinedButton(
+        onClick  = onClick,
+        modifier = modifier,
+        shape    = RoundedCornerShape(10.dp),
+        border   = BorderStroke(1.dp, GLine),
+        colors   = ButtonDefaults.outlinedButtonColors(containerColor = GRaisedBg)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector        = icon,
+                contentDescription = null,
+                tint               = tint,
+                modifier           = Modifier.size(18.dp)
+            )
+            Text(label, fontSize = 11.sp, color = GText1)
         }
     }
 }
