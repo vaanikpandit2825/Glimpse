@@ -35,6 +35,7 @@ class SOSRepository(
 
         if(eventId.isNullOrBlank()){
             onFailure(Exception("Could not generate an SOS event ID"))
+            return
         }
         locationRef.child(uid).get()
             .addOnCompleteListener {locationTask->
