@@ -1,22 +1,13 @@
-
 package com.example.glimpse.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,37 +19,20 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.glimpse.firebase.SOSRepository
+import com.example.glimpse.model.SOSEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -74,16 +48,36 @@ private val SafetyBorder = Color(0xFFE7E9F0)
 private enum class SosScreenState {
     Ready,
     Countdown,
-    ActivePreview
+    Creating,
+    CreateFailed,
+    Active
 }
 
 @Composable
 fun SafetyScreen(navController: NavController) {
+    val sosRepository = remember { SOSRepository() }
+
     var screenState by remember { mutableStateOf(SosScreenState.Ready) }
     var countdown by remember { mutableIntStateOf(5) }
+    var sosEvent by remember { mutableStateOf<SOSEvent?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = screenState != SosScreenState.Ready) {
-        screenState = SosScreenState.Ready
+        when (screenState) {
+            SosScreenState.Countdown,
+            SosScreenState.CreateFailed -> {
+                screenState = SosScreenState.Ready
+                errorMessage = null
+            }
+
+            SosScreenState.Active -> {
+                screenState = SosScreenState.Ready
+                sosEvent = null
+            }
+
+            SosScreenState.Creating,
+            SosScreenState.Ready -> Unit
+        }
     }
 
     LaunchedEffect(screenState) {
@@ -92,7 +86,23 @@ fun SafetyScreen(navController: NavController) {
                 countdown = seconds
                 delay(1000)
             }
-            screenState = SosScreenState.ActivePreview
+            screenState = SosScreenState.Creating
+        }
+    }
+    LaunchedEffect(screenState) {
+        if (screenState == SosScreenState.Creating) {
+            sosRepository.createSosevents(
+                onSuccess = { event ->
+                    sosEvent = event
+                    errorMessage = null
+                    screenState = SosScreenState.Active
+                },
+                onFailure = { error ->
+                    errorMessage = error.localizedMessage
+                        ?: "Couldn't save the SOS. Please try again."
+                    screenState = SosScreenState.CreateFailed
+                }
+            )
         }
     }
 
@@ -107,16 +117,28 @@ fun SafetyScreen(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
+                    enabled = screenState != SosScreenState.Creating,
                     onClick = {
-                        if (screenState != SosScreenState.Ready) {
-                            screenState = SosScreenState.Ready
-                        } else {
-                            navController.popBackStack()
+                        when (screenState) {
+                            SosScreenState.Ready -> navController.popBackStack()
+
+                            SosScreenState.Countdown,
+                            SosScreenState.CreateFailed -> {
+                                screenState = SosScreenState.Ready
+                                errorMessage = null
+                            }
+
+                            SosScreenState.Active -> {
+                                screenState = SosScreenState.Ready
+                                sosEvent = null
+                            }
+
+                            SosScreenState.Creating -> Unit
                         }
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.ArrowBack,
+                        Icons.Outlined.ArrowBack,
                         contentDescription = "Back",
                         tint = SafetyInk
                     )
@@ -137,7 +159,7 @@ fun SafetyScreen(navController: NavController) {
                 }
 
                 Icon(
-                    imageVector = Icons.Outlined.Shield,
+                    Icons.Outlined.Shield,
                     contentDescription = null,
                     tint = SafetyPurple,
                     modifier = Modifier
@@ -158,43 +180,69 @@ fun SafetyScreen(navController: NavController) {
         ) {
             Spacer(Modifier.height(10.dp))
 
-            PreviewNotice()
+            PreviewNotice(
+                message = when (screenState) {
+                    SosScreenState.Ready ->
+                        "Hold to begin · Nothing is sent yet"
+
+                    SosScreenState.Countdown ->
+                        "Countdown running · You can still cancel"
+
+                    SosScreenState.Creating ->
+                        "Saving your SOS to Firebase…"
+
+                    SosScreenState.CreateFailed ->
+                        "SOS was not saved · Please retry"
+
+                    SosScreenState.Active ->
+                        "SOS record saved · Contact alerts not configured"
+                }
+            )
 
             Spacer(Modifier.height(22.dp))
 
             when (screenState) {
-                SosScreenState.Ready -> {
-                    ReadyContent(
-                        onHoldComplete = {
-                            countdown = 5
-                            screenState = SosScreenState.Countdown
-                        }
-                    )
+                SosScreenState.Ready -> ReadyContent {
+                    countdown = 5
+                    errorMessage = null
+                    screenState = SosScreenState.Countdown
                 }
 
-                SosScreenState.Countdown -> {
-                    CountdownContent(
-                        seconds = countdown,
-                        onCancel = {
-                            screenState = SosScreenState.Ready
-                        }
-                    )
-                }
+                SosScreenState.Countdown -> CountdownContent(
+                    seconds = countdown,
+                    onCancel = {
+                        screenState = SosScreenState.Ready
+                    }
+                )
 
-                SosScreenState.ActivePreview -> {
-                    ActivePreviewContent(
-                        onStopPreview = {
-                            screenState = SosScreenState.Ready
-                        }
-                    )
-                }
+                SosScreenState.Creating -> CreatingSosContent()
+
+                SosScreenState.CreateFailed -> SosFailureContent(
+                    message = errorMessage ?: "Couldn't save the SOS.",
+                    onRetry = {
+                        errorMessage = null
+                        screenState = SosScreenState.Creating
+                    },
+                    onCancel = {
+                        errorMessage = null
+                        screenState = SosScreenState.Ready
+                    }
+                )
+
+                SosScreenState.Active -> ActiveSosContent(
+                    event = sosEvent,
+                    onDone = {
+                        screenState = SosScreenState.Ready
+                        sosEvent = null
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun PreviewNotice() {
+private fun PreviewNotice(message: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -204,14 +252,16 @@ private fun PreviewNotice() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = Icons.Outlined.Shield,
+            Icons.Outlined.Shield,
             contentDescription = null,
             tint = SafetyPurple,
             modifier = Modifier.size(19.dp)
         )
+
         Spacer(Modifier.size(9.dp))
+
         Text(
-            text = "UI preview · No emergency alerts will be sent",
+            text = message,
             color = SafetyPurple,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
@@ -225,7 +275,7 @@ private fun ReadyContent(onHoldComplete: () -> Unit) {
 
     val holdProgress by animateFloatAsState(
         targetValue = if (isHolding) 1f else 0f,
-        animationSpec = tween(durationMillis = 1500),
+        animationSpec = tween(1500),
         label = "sosHoldProgress"
     )
 
@@ -263,14 +313,16 @@ private fun ReadyContent(onHoldComplete: () -> Unit) {
                 .size(142.dp)
                 .clip(CircleShape)
                 .background(SafetyRed)
-                .pointerInput(Unit) {
+                .pointerInput(onHoldComplete) {
                     detectTapGestures(
                         onPress = {
                             isHolding = true
+
                             val releasedEarly = withTimeoutOrNull(1500L) {
                                 tryAwaitRelease()
                                 true
                             }
+
                             isHolding = false
 
                             if (releasedEarly == null) {
@@ -324,13 +376,13 @@ private fun ReadyContent(onHoldComplete: () -> Unit) {
     InfoCard(
         icon = {
             Icon(
-                imageVector = Icons.Outlined.LocationOn,
+                Icons.Outlined.LocationOn,
                 contentDescription = null,
                 tint = SafetyPurple
             )
         },
         title = "Location sharing",
-        description = "Live location status will be shown here once connected."
+        description = "Your latest saved location will be included if available."
     )
 
     Spacer(Modifier.height(12.dp))
@@ -338,13 +390,13 @@ private fun ReadyContent(onHoldComplete: () -> Unit) {
     InfoCard(
         icon = {
             Icon(
-                imageVector = Icons.Outlined.NotificationsActive,
+                Icons.Outlined.NotificationsActive,
                 contentDescription = null,
                 tint = SafetyPurple
             )
         },
         title = "Trusted contacts",
-        description = "Contact delivery and acknowledgements will appear here after integration."
+        description = "Contact notifications still need to be configured."
     )
 }
 
@@ -383,7 +435,7 @@ private fun CountdownContent(
     Spacer(Modifier.height(10.dp))
 
     Text(
-        text = "The countdown is a local preview. No one is being contacted.",
+        text = "No SOS record is created until the countdown finishes.",
         color = SafetyMuted,
         fontSize = 14.sp,
         lineHeight = 21.sp,
@@ -403,15 +455,9 @@ private fun CountdownContent(
             contentColor = Color.White
         )
     ) {
-        Icon(
-            imageVector = Icons.Outlined.Close,
-            contentDescription = null
-        )
+        Icon(Icons.Outlined.Close, contentDescription = null)
         Spacer(Modifier.size(8.dp))
-        Text(
-            text = "Cancel SOS",
-            fontWeight = FontWeight.SemiBold
-        )
+        Text("Cancel SOS", fontWeight = FontWeight.SemiBold)
     }
 
     Spacer(Modifier.height(12.dp))
@@ -422,28 +468,110 @@ private fun CountdownContent(
 }
 
 @Composable
-private fun ActivePreviewContent(onStopPreview: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(76.dp)
-            .clip(CircleShape)
-            .background(SafetyRedSoft),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.NotificationsActive,
-            contentDescription = null,
-            tint = SafetyRed,
-            modifier = Modifier.size(36.dp)
-        )
-    }
+private fun CreatingSosContent() {
+    Spacer(Modifier.height(60.dp))
+
+    CircularProgressIndicator(
+        color = SafetyPurple,
+        modifier = Modifier.size(48.dp)
+    )
+
+    Spacer(Modifier.height(24.dp))
+
+    Text(
+        text = "Saving your SOS",
+        color = SafetyInk,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(Modifier.height(10.dp))
+
+    Text(
+        text = "Recording your emergency request in Firebase. Please keep this screen open.",
+        color = SafetyMuted,
+        fontSize = 14.sp,
+        lineHeight = 21.sp,
+        textAlign = TextAlign.Center
+    )
+}
+
+@Composable
+private fun SosFailureContent(
+    message: String,
+    onRetry: () -> Unit,
+    onCancel: () -> Unit
+) {
+    Spacer(Modifier.height(42.dp))
+
+    Icon(
+        Icons.Outlined.Close,
+        contentDescription = null,
+        tint = SafetyRed,
+        modifier = Modifier.size(48.dp)
+    )
 
     Spacer(Modifier.height(18.dp))
 
     Text(
-        text = "SOS preview active",
-        color = SafetyRed,
-        fontSize = 25.sp,
+        text = "SOS wasn't saved",
+        color = SafetyInk,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(Modifier.height(10.dp))
+
+    Text(
+        text = message,
+        color = SafetyMuted,
+        fontSize = 14.sp,
+        textAlign = TextAlign.Center,
+        lineHeight = 21.sp
+    )
+
+    Spacer(Modifier.height(24.dp))
+
+    Button(
+        onClick = onRetry,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(15.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = SafetyPurple
+        )
+    ) {
+        Text("Retry saving SOS", fontWeight = FontWeight.SemiBold)
+    }
+
+    TextButton(onClick = onCancel) {
+        Text("Return to safety screen", color = SafetyMuted)
+    }
+}
+
+@Composable
+private fun ActiveSosContent(
+    event: SOSEvent?,
+    onDone: () -> Unit
+) {
+    Spacer(Modifier.height(22.dp))
+
+    Icon(
+        Icons.Outlined.CheckCircle,
+        contentDescription = null,
+        tint = SafetyPurple,
+        modifier = Modifier.size(64.dp)
+    )
+
+    Spacer(Modifier.height(18.dp))
+
+    Text(
+        text = "SOS recorded",
+        color = SafetyInk,
+        fontSize = 26.sp,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center
     )
@@ -451,7 +579,7 @@ private fun ActivePreviewContent(onStopPreview: () -> Unit) {
     Spacer(Modifier.height(8.dp))
 
     Text(
-        text = "This is a demonstration of the active SOS screen. No alert has been created or sent.",
+        text = "Firebase confirmed that your SOS record was saved. Trusted-contact notifications have not been configured yet.",
         color = SafetyMuted,
         fontSize = 14.sp,
         lineHeight = 21.sp,
@@ -461,23 +589,37 @@ private fun ActivePreviewContent(onStopPreview: () -> Unit) {
     Spacer(Modifier.height(24.dp))
 
     StatusCard(
-        title = "Your location",
-        status = "Not connected",
-        detail = "Live coordinates and last-updated time will appear here after location integration."
+        title = "SOS record",
+        status = "Saved",
+        detail = "ID: ${event?.id ?: "Unavailable"}"
+    )
+
+    Spacer(Modifier.height(12.dp))
+
+    val hasLocation = event?.latitude != null && event.longitude != null
+
+    StatusCard(
+        title = "Location snapshot",
+        status = if (hasLocation) "Available" else "Unavailable",
+        detail = if (hasLocation) {
+            "Coordinates: ${event!!.latitude}, ${event.longitude}"
+        } else {
+            "No coordinates were included in this SOS record."
+        }
     )
 
     Spacer(Modifier.height(12.dp))
 
     StatusCard(
         title = "Trusted contacts",
-        status = "Not connected",
-        detail = "Delivery, acknowledgement, and response status will appear here after Firebase integration."
+        status = "Not notified",
+        detail = "${event?.recipientUids?.size ?: 0} connected contacts recorded as recipients. This does not mean any notification was delivered."
     )
 
     Spacer(Modifier.height(24.dp))
 
     Button(
-        onClick = onStopPreview,
+        onClick = onDone,
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),
@@ -486,7 +628,7 @@ private fun ActivePreviewContent(onStopPreview: () -> Unit) {
             containerColor = SafetyPurple
         )
     ) {
-        Text("End preview", fontWeight = FontWeight.SemiBold)
+        Text("Done", fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -499,8 +641,10 @@ private fun InfoCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, SafetyBorder),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        border = BorderStroke(1.dp, SafetyBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
@@ -526,7 +670,9 @@ private fun InfoCard(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp
                 )
+
                 Spacer(Modifier.height(4.dp))
+
                 Text(
                     text = description,
                     color = SafetyMuted,
@@ -547,8 +693,10 @@ private fun StatusCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, SafetyBorder),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        border = BorderStroke(1.dp, SafetyBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -563,6 +711,7 @@ private fun StatusCard(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
+
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = SafetyRedSoft
