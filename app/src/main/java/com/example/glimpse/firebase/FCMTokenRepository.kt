@@ -13,6 +13,7 @@ class FCMTokenRepository {
         "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
     )
 
+
     fun registerCurrentDevice(
         onSuccess: () -> Unit = {},
         onFailure: (Exception) -> Unit = {}
@@ -20,22 +21,49 @@ class FCMTokenRepository {
         val uid = auth.currentUser?.uid
 
         if (uid.isNullOrBlank()) {
-            onFailure(Exception("You must log in to register for notifications."))
+            onFailure(Exception("No logged-in Firebase user"))
             return
         }
 
+        android.util.Log.d("GLIMPSE_FCM", "Registering token for UID: $uid")
+
         FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token ->
-                val tokenRef = database.getReference("fcmTokens")
+                android.util.Log.d(
+                    "GLIMPSE_FCM",
+                    "FCM token obtained successfully"
+                )
+
+                database.getReference("fcmTokens")
                     .child(uid)
                     .child(token)
-
-                tokenRef.setValue(true)
-                    .addOnSuccessListener { onSuccess() }
-                    .addOnFailureListener { onFailure(it) }
+                    .setValue(true)
+                    .addOnSuccessListener {
+                        android.util.Log.d(
+                            "GLIMPSE_FCM",
+                            "Token saved successfully"
+                        )
+                        onSuccess()
+                    }
+                    .addOnFailureListener { exception ->
+                        android.util.Log.e(
+                            "GLIMPSE_FCM",
+                            "Database write failed",
+                            exception
+                        )
+                        onFailure(exception)
+                    }
             }
-            .addOnFailureListener { onFailure(it) }
+            .addOnFailureListener { exception ->
+                android.util.Log.e(
+                    "GLIMPSE_FCM",
+                    "FCM token retrieval failed",
+                    exception
+                )
+                onFailure(exception)
+            }
     }
+
 
     fun removeCurrentDeviceToken(
         onSuccess: () -> Unit = {},
