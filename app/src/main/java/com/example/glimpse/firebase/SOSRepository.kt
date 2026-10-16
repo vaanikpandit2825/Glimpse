@@ -1,6 +1,6 @@
+
 package com.example.glimpse.firebase
 
-import coil.request.SuccessResult
 import com.example.glimpse.model.SOSEvent
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -8,106 +8,168 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.MutableData
 import com.google.firebase.database.Transaction
-import com.google.rpc.QuotaFailure
 
 class SOSRepository(
-    private val auth: FirebaseAuth= FirebaseAuth.getInstance(),
-    private val database: FirebaseDatabase=FirebaseDatabase.getInstance(
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val database: FirebaseDatabase = FirebaseDatabase.getInstance(
         "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
     )
-){
-    private val locationRef= database.getReference("locations")
-    private val connectionRef=database.getReference("connections")
-    private val sosEventsRef=database.getReference("sosEvents")
+) {
+    private val locationRef = database.getReference("locations")
+    private val connectionRef = database.getReference("connections")
+    private val sosEventsRef = database.getReference("sosEvents")
+
+    companion object {
+        private const val STATUS_ACTIVE = "active"
+        private const val STATUS_CANCELLED = "cancelled"
+        private const val STATUS_RESOLVED = "resolved"
+
+        // Location older than this is considered stale.
+        private const val MAX_LOCATION_AGE_MS = 2 * 60 * 1000L
+    }
 
     fun createSosevents(
-        onSuccess:(SOSEvent)->Unit,
-        onFailure:(Exception)->Unit
-    ){
-        val uid=auth.currentUser?.uid
+        onSuccess: (SOSEvent) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val uid = auth.currentUser?.uid
 
-        if(uid.isNullOrBlank()){
-            onFailure(Exception("You must login to create an SOS event."))
+        if (uid.isNullOrBlank()) {
+            onFailure(Exception("You must log in to create an SOS event."))
             return
         }
-        val eventRef=sosEventsRef.child(uid).push()
-        val eventId=eventRef.key
 
-        if(eventId.isNullOrBlank()){
-            onFailure(Exception("Could not generate an SOS event ID"))
+        val eventRef = sosEventsRef.child(uid).push()
+        val eventId = eventRef.key
+
+        if (eventId.isNullOrBlank()) {
+            onFailure(Exception("Could not generate an SOS event ID."))
             return
         }
+
         locationRef.child(uid).get()
-            .addOnCompleteListener {locationTask->
-                 val locationSnapshot=
-                     if(locationTask.isSuccessful)locationTask.result else null
-
+            .addOnSuccessListener { locationSnapshot ->
                 connectionRef.child(uid).get()
-                    .addOnCompleteListener { connectionTask ->
-                        val connectionUids=mutableMapOf<String,Boolean>()
+                    .addOnSuccessListener { connectionSnapshot ->
+                        try {
+                            val recipients = mutableMapOf<String, Boolean>()
 
-                        if(connectionTask.isSuccessful){
-                            connectionTask.result.children.forEach { connection->
-                                val partnerUid=connection.key
-                                val status=connection.child("status")
+                            connectionSnapshot.children.forEach { connection ->
+                                val partnerUid = connection.key
+                                val status = connection
+                                    .child("status")
                                     .getValue(String::class.java)
 
-                                if(!partnerUid.isNullOrBlank() && status=="connected"){
-                                    connectionUids[partnerUid]=true
+                                if (
+                                    !partnerUid.isNullOrBlank() &&
+                                    partnerUid != uid &&
+                                    status == "connected"
+                                ) {
+                                    recipients[partnerUid] = true
                                 }
                             }
-                        }
-                        val now = System.currentTimeMillis()
 
-                        val latitude = locationSnapshot
-                            ?.child("latitude")
-                            ?.getValue(Double::class.java)
+                            val now = System.currentTimeMillis()
 
-                        val longitude = locationSnapshot
-                            ?.child("longitude")
-                            ?.getValue(Double::class.java)
+                            val rawLatitude = locationSnapshot
+                                .child("latitude")
+                                .getValue(Double::class.java)
 
-                        val locationTimestamp = locationSnapshot
-                            ?.child("timestamp")
-                            ?.getValue(Long::class.java)
+                            val rawLongitude = locationSnapshot
+                                .child("longitude")
+                                .getValue(Double::class.java)
 
-                        val event = SOSEvent(
-                            id = eventId,
-                            userUid = uid,
-                            status = "active",
-                            createdAt = now,
-                            updatedAt = now,
-                            latitude = latitude,
-                            longitude = longitude,
-                            locationTimestamp = locationTimestamp,
-                            recipientUids = connectionUids
-                        )
+                            val rawTimestamp = locationSnapshot
+                                .child("timestamp")
+                                .getValue(Long::class.java)
 
-                        val record = mutableMapOf<String, Any>(
-                            "id" to event.id,
-                            "userUid" to event.userUid,
-                            "status" to event.status,
-                            "createdAt" to event.createdAt,
-                            "updatedAt" to event.updatedAt,
-                            "recipientUids" to event.recipientUids
-                        )
+                            val validCoordinates =
+                                rawLatitude != null &&
+                                        rawLongitude != null &&
+                                        rawLatitude in -90.0..90.0 &&
+                                        rawLongitude in -180.0..180.0
 
-                        if (latitude != null && longitude != null) {
-                            record["location"] = mapOf(
-                                "latitude" to latitude,
-                                "longitude" to longitude,
-                                "timestamp" to (locationTimestamp ?: 0L)
+                            val freshLocation =
+                                validCoordinates &&
+                                        rawTimestamp != null &&
+                                        rawTimestamp > 0L &&
+                                        rawTimestamp <= now &&
+                                        now - rawTimestamp <= MAX_LOCATION_AGE_MS
+
+                            val event = SOSEvent(
+                                id = eventId,
+                                userUid = uid,
+                                createdAt = now,
+                                updatedAt = now,
+                                status = STATUS_ACTIVE,
+                                latitude = if (freshLocation) rawLatitude else null,
+                                longitude = if (freshLocation) rawLongitude else null,
+                                locationTimestamp = if (freshLocation) {
+                                    rawTimestamp
+                                } else {
+                                    null
+                                },
+                                recipientUids = recipients
                             )
-                        }
 
-                        eventRef.setValue(record)
-                            .addOnSuccessListener {
-                                onSuccess(event)
-                            }
-                            .addOnFailureListener { error ->
-                                onFailure(error)
-                            }
+                            // Keep the saved Firebase structure aligned
+                            // with the SOSEvent model.
+                            val record = mapOf(
+                                "id" to event.id,
+                                "userUid" to event.userUid,
+                                "createdAt" to event.createdAt,
+                                "updatedAt" to event.updatedAt,
+                                "status" to event.status,
+                                "latitude" to event.latitude,
+                                "longitude" to event.longitude,
+                                "locationTimestamp" to event.locationTimestamp,
+                                "recipientUids" to event.recipientUids
+                            )
+
+                            eventRef.setValue(record)
+                                .addOnSuccessListener {
+                                    onSuccess(event)
+                                }
+                                .addOnFailureListener { error ->
+                                    onFailure(error)
+                                }
+                        } catch (error: Exception) {
+                            onFailure(error)
+                        }
                     }
+                    .addOnFailureListener { error ->
+                        onFailure(error)
+                    }
+            }
+            .addOnFailureListener { error ->
+                onFailure(error)
+            }
+    }
+
+    fun getSosEvent(
+        eventId: String,
+        onSuccess: (SOSEvent) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val uid = auth.currentUser?.uid
+
+        if (uid.isNullOrBlank()) {
+            onFailure(Exception("You must log in to view this SOS event."))
+            return
+        }
+
+        sosEventsRef.child(uid).child(eventId).get()
+            .addOnSuccessListener { snapshot ->
+                val event = snapshot.getValue(SOSEvent::class.java)
+
+                if (event != null) {
+                    onSuccess(event)
+                } else {
+                    onFailure(Exception("The SOS event could not be found in Firebase."))
+                }
+            }
+            .addOnFailureListener { error ->
+                onFailure(error)
             }
     }
 
@@ -118,7 +180,7 @@ class SOSRepository(
     ) {
         updateActiveEventStatus(
             eventId = eventId,
-            newStatus = "cancelled",
+            newStatus = STATUS_CANCELLED,
             onSuccess = onSuccess,
             onFailure = onFailure
         )
@@ -131,7 +193,7 @@ class SOSRepository(
     ) {
         updateActiveEventStatus(
             eventId = eventId,
-            newStatus = "resolved",
+            newStatus = STATUS_RESOLVED,
             onSuccess = onSuccess,
             onFailure = onFailure
         )
@@ -158,7 +220,9 @@ class SOSRepository(
         val eventRef = sosEventsRef.child(uid).child(eventId)
 
         eventRef.runTransaction(object : Transaction.Handler {
-            override fun doTransaction(currentData: MutableData): Transaction.Result {
+            override fun doTransaction(
+                currentData: MutableData
+            ): Transaction.Result {
                 if (currentData.value == null) {
                     return Transaction.abort()
                 }
@@ -167,12 +231,13 @@ class SOSRepository(
                     .child("status")
                     .getValue(String::class.java)
 
-                if (currentStatus != "active") {
+                if (currentStatus != STATUS_ACTIVE) {
                     return Transaction.abort()
                 }
 
                 currentData.child("status").value = newStatus
-                currentData.child("updatedAt").value = System.currentTimeMillis()
+                currentData.child("updatedAt").value =
+                    System.currentTimeMillis()
 
                 return Transaction.success(currentData)
             }
@@ -186,9 +251,10 @@ class SOSRepository(
                     error != null -> onFailure(error.toException())
                     committed -> onSuccess()
                     else -> onFailure(
-                        Exception("SOS event does not exist or is no longer active.")
+                        Exception(
+                            "SOS event does not exist or is no longer active."
+                        )
                     )
-
                 }
             }
         })
