@@ -10,7 +10,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.glimpse.Location.LocationRepository
 import com.example.glimpse.Location.RequestLocationPermission
 import com.example.glimpse.auth.LoginScreen
@@ -45,6 +46,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.example.glimpse.ui.screens.GroupSharingPermissionsScreen
 import com.example.glimpse.model.GroupMember
 import com.example.glimpse.ui.screens.MemberProfileScreen
+import com.example.glimpse.ui.screens.SafetyScreen
 
 @Composable
 fun AppNavigation() {
@@ -611,5 +613,25 @@ fun AppNavigation() {
                 }
             )
         }
+        composable("safety") {
+            SafetyScreen(
+                navController = navController
+            )
+        }
+
+        composable(
+            route = "safety/{eventId}",
+            arguments = listOf(
+                navArgument("eventId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            SafetyScreen(
+                navController = navController,
+                incomingEventId = backStackEntry.arguments?.getString("eventId")
+            )
+        }
+
     }
 }
