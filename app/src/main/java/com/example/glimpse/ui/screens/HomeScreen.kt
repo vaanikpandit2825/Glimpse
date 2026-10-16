@@ -1,7 +1,6 @@
 package com.example.glimpse.ui.screens
 
 import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
@@ -13,8 +12,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.example.glimpse.firebase.SOSRepository
 import coil.compose.AsyncImage
 import com.example.glimpse.BuildConfig
 import com.example.glimpse.Location.AdaptiveLocationEngine
@@ -70,6 +72,7 @@ import com.example.glimpse.weather.WeatherData
 import com.example.glimpse.weather.WeatherRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.expressions.dsl.const
@@ -80,6 +83,11 @@ import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 
 private val GlimpseBlue = Color(0xFF4F46E5)
 private val GlimpseBlueLight = Color(0xFF6C7BFF)
@@ -130,6 +138,23 @@ fun HomeScreen(
     }
     val firebaseRepository = remember { FirebaseRepository() }
     val weatherRepository = remember { WeatherRepository() }
+    val sosRepository = remember { SOSRepository() }
+
+    var sosDialogVisible by remember { mutableStateOf(false) }
+    var sosCountdownActive by remember { mutableStateOf(false) }
+    var sosCountdown by remember { mutableIntStateOf(3) }
+    var sosCreating by remember { mutableStateOf(false) }
+    var sosMessage by remember { mutableStateOf<String?>(null) }
+
+    fun beginHomeSos() {
+        if (sosDialogVisible || sosCreating) return
+        vibrate(context, 80L)
+        sosCountdown = 3
+        sosMessage = null
+        sosCreating = false
+        sosDialogVisible = true
+        sosCountdownActive = true
+    }
 
     val cameraState = rememberCameraState()
 
@@ -291,6 +316,41 @@ fun HomeScreen(
             adaptiveLocationTracker.stop()
         }
     }
+    LaunchedEffect(sosCountdownActive) {
+        if (sosCountdownActive) {
+            for (seconds in 3 downTo 1) {
+                sosCountdown = seconds
+                vibrate(context, 45L)
+                delay(1_000L)
+            }
+
+            if (sosCountdownActive) {
+                sosCountdownActive = false
+                sosCreating = true
+                vibrate(context, 180L)
+
+                sosRepository.createSosevents(
+                    onSuccess = { event ->
+                        sosCreating = false
+                        sosDialogVisible = false
+
+                        vibrate(context, 350L)
+
+                        navController.navigate("safety/${event.id}") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onFailure = { error ->
+                        sosCreating = false
+                        sosMessage = "Could not create the SOS event: ${error.localizedMessage ?: "Please try again."}"
+                        Log.e("GLIMPSE_HOME_SOS", "Failed to create SOS event", error)
+                        vibrate(context, 120L)
+                    }
+                )
+            }
+        }
+    }
+
     Scaffold(
         containerColor = GlimpseSheet,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -306,7 +366,8 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     onHome = {},
                     onGroups = { navController.navigate("groups") },
-                    onEmergencySos = { navController.navigate("safety") }
+                    onEmergencySos = { navController.navigate("safety") },
+                    onLongPressEmergencySos = { beginHomeSos() }
                 )
             }
         }
@@ -460,6 +521,75 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (sosDialogVisible) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!sosCreating) {
+                    sosCountdownActive = false
+                    sosDialogVisible = false
+                }
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.GppMaybe,
+                    contentDescription = null,
+                    tint = GlimpseRed,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = when {
+                        sosCreating -> "Creating SOS"
+                        sosMessage != null -> "SOS status"
+                        else -> "Emergency SOS"
+                    }
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (sosCountdownActive) {
+                        Text("SOS will be triggered in")
+                        Text(
+                            text = "$sosCountdown",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GlimpseRed
+                        )
+                        Text("Cancel now if this was accidental.")
+                    } else if (sosCreating) {
+                        CircularProgressIndicator()
+                        Text("Creating your SOS event…")
+                    } else {
+                        Text(sosMessage ?: "SOS countdown cancelled.")
+                    }
+                }
+            },
+            confirmButton = {
+                if (!sosCountdownActive && !sosCreating) {
+                    TextButton(onClick = { sosDialogVisible = false }) {
+                        Text("Done")
+                    }
+                }
+            },
+            dismissButton = {
+                if (sosCountdownActive) {
+                    TextButton(
+                        onClick = {
+                            sosCountdownActive = false
+                            sosDialogVisible = false
+                            vibrate(context, 100L)
+                        }
+                    ) {
+                        Text("Cancel SOS", color = GlimpseRed)
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -866,12 +996,14 @@ private fun HomeShortcut(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HomeBottomNavigation(
     modifier: Modifier,
     onHome: () -> Unit,
     onGroups: () -> Unit,
-    onEmergencySos: () -> Unit
+    onEmergencySos: () -> Unit,
+    onLongPressEmergencySos: () -> Unit
 ) {
     Box(
         modifier = modifier
@@ -917,7 +1049,11 @@ private fun HomeBottomNavigation(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .size(82.dp)
-                .clickable(role = Role.Button, onClick = onEmergencySos),
+                .combinedClickable(
+                    role = Role.Button,
+                    onClick = onEmergencySos,
+                    onLongClick = onLongPressEmergencySos
+                ),
             shape = CircleShape,
             color = Color(0xFFFF515F),
             border = BorderStroke(5.dp, Color.White),
@@ -926,7 +1062,7 @@ private fun HomeBottomNavigation(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Rounded.GppMaybe,
-                    contentDescription = "Emergency SOS",
+                    contentDescription = "Emergency SOS. Tap to open Safety; press and hold to trigger SOS.",
                     tint = Color.White,
                     modifier = Modifier.size(40.dp)
                 )
@@ -1128,5 +1264,32 @@ private fun ActionCard(
                 }
             }
         }
+    }
+}
+
+internal fun vibrate(
+    context: Context,
+    duration: Long = 100L
+) {
+    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val manager = context.getSystemService(
+            Context.VIBRATOR_MANAGER_SERVICE
+        ) as VibratorManager
+        manager.defaultVibrator
+    } else {
+        @Suppress("DEPRECATION")
+        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        vibrator.vibrate(
+            VibrationEffect.createOneShot(
+                duration,
+                VibrationEffect.DEFAULT_AMPLITUDE
+            )
+        )
+    } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(duration)
     }
 }
