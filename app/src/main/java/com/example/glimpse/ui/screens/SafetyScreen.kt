@@ -35,7 +35,9 @@ import com.example.glimpse.firebase.SOSRepository
 import com.example.glimpse.model.SOSEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
-
+import androidx.compose.ui.platform.LocalContext
+import com.example.glimpse.ui.screens.vibrate
+import kotlinx.coroutines.delay
 private val SafetyPurple = Color(0xFF4F46E5)
 private val SafetyPurpleSoft = Color(0xFFEDEBFF)
 private val SafetyRed = Color(0xFFDC3545)
@@ -54,13 +56,21 @@ private enum class SosScreenState {
 }
 
 @Composable
-fun SafetyScreen(navController: NavController) {
+fun SafetyScreen(
+    navController: NavController,
+    incomingEventId: String?=null
+) {
     val sosRepository = remember { SOSRepository() }
+    val context = LocalContext.current
 
     var screenState by remember { mutableStateOf(SosScreenState.Ready) }
-    var countdown by remember { mutableIntStateOf(5) }
+    var countdown by remember { mutableIntStateOf(3) }
     var sosEvent by remember { mutableStateOf<SOSEvent?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        vibrate(context, 100L)
+    }
 
     BackHandler(enabled = screenState != SosScreenState.Ready) {
         when (screenState) {
@@ -79,16 +89,35 @@ fun SafetyScreen(navController: NavController) {
             SosScreenState.Ready -> Unit
         }
     }
+    LaunchedEffect(incomingEventId) {
+        if (!incomingEventId.isNullOrBlank()) {
+            sosRepository.getSosEvent(
+                eventId = incomingEventId,
+                onSuccess = { event ->
+                    sosEvent = event
+                    errorMessage = null
+                    screenState = SosScreenState.Active
+                    vibrate(context, 250L)
+                },
+                onFailure = { error ->
+                    errorMessage = error.localizedMessage
+                        ?: "Could not load the saved SOS event."
+                    screenState = SosScreenState.CreateFailed
+                }
+            )
+        }
+    }
 
     LaunchedEffect(screenState) {
         if (screenState == SosScreenState.Countdown) {
-            for (seconds in 5 downTo 1) {
+            for (seconds in 3 downTo 1) {
                 countdown = seconds
-                delay(1000)
+                delay(1000L)
             }
             screenState = SosScreenState.Creating
         }
     }
+
     LaunchedEffect(screenState) {
         if (screenState == SosScreenState.Creating) {
             sosRepository.createSosevents(
@@ -106,6 +135,38 @@ fun SafetyScreen(navController: NavController) {
         }
     }
 
+    LaunchedEffect(screenState) {
+        if (screenState == SosScreenState.Creating) {
+            if (!incomingEventId.isNullOrBlank()) {
+                sosRepository.getSosEvent(
+                    eventId = incomingEventId,
+                    onSuccess = { event ->
+                        sosEvent = event
+                        errorMessage = null
+                        screenState = SosScreenState.Active
+                    },
+                    onFailure = { error ->
+                        errorMessage = error.localizedMessage
+                            ?: "Couldn't load the existing SOS event."
+                        screenState = SosScreenState.CreateFailed
+                    }
+                )
+            } else {
+                sosRepository.createSosevents(
+                    onSuccess = { event ->
+                        sosEvent = event
+                        errorMessage = null
+                        screenState = SosScreenState.Active
+                    },
+                    onFailure = { error ->
+                        errorMessage = error.localizedMessage
+                            ?: "Couldn't save the SOS. Please try again."
+                        screenState = SosScreenState.CreateFailed
+                    }
+                )
+            }
+        }
+    }
     Scaffold(
         containerColor = SafetyBackground,
         topBar = {
@@ -203,7 +264,7 @@ fun SafetyScreen(navController: NavController) {
 
             when (screenState) {
                 SosScreenState.Ready -> ReadyContent {
-                    countdown = 5
+                    countdown = 3
                     errorMessage = null
                     screenState = SosScreenState.Countdown
                 }
