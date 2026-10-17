@@ -52,7 +52,23 @@ class AuthRepository {
                         firebaseRepository.ensureGlimpseId(
                             uid = uid,
                             onSuccess = {
-                                onSuccess()
+                                fcmTokenRepository.registerCurrentDevice(
+                                    onSuccess = {
+                                        android.util.Log.d(
+                                            "GLIMPSE_FCM",
+                                            "Token registration completed after signup"
+                                        )
+                                        onSuccess()
+                                    },
+                                    onFailure = { exception ->
+                                        android.util.Log.e(
+                                            "GLIMPSE_FCM",
+                                            "Token registration failed after signup",
+                                            exception
+                                        )
+                                        onSuccess()
+                                    }
+                                )
                             },
                             onFailure = {
                                 onFailure(it)
@@ -85,8 +101,12 @@ class AuthRepository {
                     onSuccess = {
                         onSuccess()
                     },
-                    onFailure = {
-
+                    onFailure = { exception ->
+                        android.util.Log.e(
+                            "GLIMPSE_FCM",
+                            "Token registration failed during login",
+                            exception
+                        )
                         onSuccess()
                     }
                 )
