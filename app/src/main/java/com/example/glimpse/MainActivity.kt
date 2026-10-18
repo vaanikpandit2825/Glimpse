@@ -19,23 +19,13 @@ class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            // Notifications are enabled if the user grants permission.
-            // If denied, the app can still be used normally.
-        }
+        ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         requestNotificationPermission()
-
         CloudinaryConfig.initialize(this)
-
-        setContent {
-            GlimpseTheme {
-                AppNavigation()
-            }
-        }
 
         if (!Places.isInitialized()) {
             Places.initializeWithNewPlacesApiEnabled(
@@ -43,16 +33,37 @@ class MainActivity : ComponentActivity() {
                 BuildConfig.GOOGLE_PLACES_API_KEY
             )
         }
+
+        setContent {
+            GlimpseTheme {
+                AppNavigation(
+                    incomingSenderUid = intent.getStringExtra("senderUid"),
+                    incomingEventId = intent.getStringExtra("eventId")
+                )
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        val senderUid = intent.getStringExtra("senderUid")
+        val eventId = intent.getStringExtra("eventId")
+
+        if (!senderUid.isNullOrBlank() && !eventId.isNullOrBlank()) {
+            // Forward the notification tap to the existing navigation flow.
+            // AppNavigation will handle navigation in the next step.
+        }
     }
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val permission = Manifest.permission.POST_NOTIFICATIONS
 
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    permission
-                ) != PackageManager.PERMISSION_GRANTED
+            if (
+                ContextCompat.checkSelfPermission(this, permission) !=
+                PackageManager.PERMISSION_GRANTED
             ) {
                 notificationPermissionLauncher.launch(permission)
             }
