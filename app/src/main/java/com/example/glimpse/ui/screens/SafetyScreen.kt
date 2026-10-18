@@ -58,6 +58,7 @@ private enum class SosScreenState {
 @Composable
 fun SafetyScreen(
     navController: NavController,
+    incomingSenderUid: String? = null,
     incomingEventId: String?=null
 ) {
     val sosRepository = remember { SOSRepository() }
@@ -89,9 +90,14 @@ fun SafetyScreen(
             SosScreenState.Ready -> Unit
         }
     }
-    LaunchedEffect(incomingEventId) {
-        if (!incomingEventId.isNullOrBlank()) {
+
+    LaunchedEffect(incomingSenderUid, incomingEventId) {
+        if (
+            !incomingSenderUid.isNullOrBlank() &&
+            !incomingEventId.isNullOrBlank()
+        ) {
             sosRepository.getSosEvent(
+                senderUid = incomingSenderUid,
                 eventId = incomingEventId,
                 onSuccess = { event ->
                     sosEvent = event
@@ -108,6 +114,7 @@ fun SafetyScreen(
         }
     }
 
+
     LaunchedEffect(screenState) {
         if (screenState == SosScreenState.Countdown) {
             for (seconds in 3 downTo 1) {
@@ -118,27 +125,16 @@ fun SafetyScreen(
         }
     }
 
-    LaunchedEffect(screenState) {
-        if (screenState == SosScreenState.Creating) {
-            sosRepository.createSosevents(
-                onSuccess = { event ->
-                    sosEvent = event
-                    errorMessage = null
-                    screenState = SosScreenState.Active
-                },
-                onFailure = { error ->
-                    errorMessage = error.localizedMessage
-                        ?: "Couldn't save the SOS. Please try again."
-                    screenState = SosScreenState.CreateFailed
-                }
-            )
-        }
-    }
 
     LaunchedEffect(screenState) {
         if (screenState == SosScreenState.Creating) {
-            if (!incomingEventId.isNullOrBlank()) {
+            // Incoming alerts load an existing event; they must not create a new one.
+            if (
+                !incomingSenderUid.isNullOrBlank() &&
+                !incomingEventId.isNullOrBlank()
+            ) {
                 sosRepository.getSosEvent(
+                    senderUid = incomingSenderUid,
                     eventId = incomingEventId,
                     onSuccess = { event ->
                         sosEvent = event
@@ -152,6 +148,7 @@ fun SafetyScreen(
                     }
                 )
             } else {
+                // Normal SOS creation initiated by this user.
                 sosRepository.createSosevents(
                     onSuccess = { event ->
                         sosEvent = event
@@ -167,6 +164,9 @@ fun SafetyScreen(
             }
         }
     }
+
+
+
     Scaffold(
         containerColor = SafetyBackground,
         topBar = {
