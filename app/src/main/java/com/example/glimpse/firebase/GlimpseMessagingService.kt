@@ -36,13 +36,14 @@ class GlimpseMessagingService : FirebaseMessagingService() {
     }
 
 
-    override fun onMessageReceived(message: RemoteMessage) {
-        android.util.Log.e(
-            "GLIMPSE_FCM",
-            "From: ${message.from}, Notification: ${message.notification?.body}"
-        )
 
+    override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+
+        android.util.Log.d(
+            "GLIMPSE_FCM",
+            "Received data keys: ${message.data.keys}"
+        )
 
         val title = message.notification?.title
             ?: message.data["title"]
@@ -52,13 +53,29 @@ class GlimpseMessagingService : FirebaseMessagingService() {
             ?: message.data["body"]
             ?: "Someone might need your help."
 
-        showNotification(title, body)
+        val senderUid = message.data["senderUid"]
+        val eventId = message.data["eventId"]
+
+        showNotification(
+            title = title,
+            body = body,
+            senderUid = senderUid,
+            eventId = eventId
+        )
     }
 
-    private fun showNotification(title: String, body: String) {
+
+
+    private fun showNotification(
+        title: String,
+        body: String,
+        senderUid: String?,
+        eventId: String?
+    ) {
         val channelId = "glimpse_sos_alerts"
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE)
-                as NotificationManager
+
+        val manager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -66,22 +83,29 @@ class GlimpseMessagingService : FirebaseMessagingService() {
                 "SOS Alerts",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Emergency SOS Notification"
+                description = "Emergency SOS notifications"
                 enableVibration(true)
             }
             manager.createNotificationChannel(channel)
         }
+
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+            if (!senderUid.isNullOrBlank() && !eventId.isNullOrBlank()) {
+                putExtra("senderUid", senderUid)
+                putExtra("eventId", eventId)
+            }
         }
+
         val pendingIntent = PendingIntent.getActivity(
             this,
-            1001,
+            (eventId ?: System.currentTimeMillis().toString()).hashCode(),
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or
-                    PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
@@ -93,15 +117,18 @@ class GlimpseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .build()
 
-        if (androidx.core.content.ContextCompat.checkSelfPermission(
+        if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            androidx.core.content.ContextCompat.checkSelfPermission(
                 this,
                 android.Manifest.permission.POST_NOTIFICATIONS
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
             NotificationManagerCompat.from(this).notify(
-                (System.currentTimeMillis() % Int.MAX_VALUE).toInt(),
+                (eventId ?: System.currentTimeMillis().toString()).hashCode(),
                 notification
             )
         }
     }
+
 }
