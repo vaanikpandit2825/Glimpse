@@ -146,32 +146,47 @@ class SOSRepository(
             }
     }
 
+
     fun getSosEvent(
+        senderUid: String,
         eventId: String,
         onSuccess: (SOSEvent) -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        val uid = auth.currentUser?.uid
+        val recipientUid = auth.currentUser?.uid
 
-        if (uid.isNullOrBlank()) {
+        if (recipientUid.isNullOrBlank()) {
             onFailure(Exception("You must log in to view this SOS event."))
             return
         }
 
-        sosEventsRef.child(uid).child(eventId).get()
+        if (senderUid.isBlank() || eventId.isBlank()) {
+            onFailure(Exception("Sender UID and SOS event ID are required."))
+            return
+        }
+
+        sosEventsRef.child(senderUid).child(eventId).get()
             .addOnSuccessListener { snapshot ->
                 val event = snapshot.getValue(SOSEvent::class.java)
 
-                if (event != null) {
-                    onSuccess(event)
-                } else {
-                    onFailure(Exception("The SOS event could not be found in Firebase."))
+                when {
+                    event == null ->
+                        onFailure(Exception("The SOS event could not be found."))
+
+                    event.userUid != senderUid ->
+                        onFailure(Exception("SOS sender verification failed."))
+
+                    event.recipientUids[recipientUid] != true ->
+                        onFailure(Exception("You are not an intended recipient of this SOS."))
+
+                    else -> onSuccess(event)
                 }
             }
             .addOnFailureListener { error ->
                 onFailure(error)
             }
     }
+
 
     fun cancelSosEvent(
         eventId: String,
