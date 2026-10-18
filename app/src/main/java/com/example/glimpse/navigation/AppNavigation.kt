@@ -49,7 +49,10 @@ import com.example.glimpse.ui.screens.MemberProfileScreen
 import com.example.glimpse.ui.screens.SafetyScreen
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    incomingSenderUid: String? = null,
+    incomingEventId: String? = null
+) {
 
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -619,9 +622,13 @@ fun AppNavigation() {
             )
         }
 
+
         composable(
-            route = "safety/{eventId}",
+            route = "safety/{senderUid}/{eventId}",
             arguments = listOf(
+                navArgument("senderUid") {
+                    type = NavType.StringType
+                },
                 navArgument("eventId") {
                     type = NavType.StringType
                 }
@@ -629,9 +636,13 @@ fun AppNavigation() {
         ) { backStackEntry ->
             SafetyScreen(
                 navController = navController,
-                incomingEventId = backStackEntry.arguments?.getString("eventId")
+                incomingSenderUid = backStackEntry.arguments
+                    ?.getString("senderUid"),
+                incomingEventId = backStackEntry.arguments
+                    ?.getString("eventId")
             )
         }
+
 
     }
 }
