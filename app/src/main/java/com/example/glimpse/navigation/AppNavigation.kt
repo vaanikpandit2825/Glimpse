@@ -47,6 +47,7 @@ import com.example.glimpse.ui.screens.GroupSharingPermissionsScreen
 import com.example.glimpse.model.GroupMember
 import com.example.glimpse.ui.screens.MemberProfileScreen
 import com.example.glimpse.ui.screens.SafetyScreen
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun AppNavigation(
@@ -55,6 +56,18 @@ fun AppNavigation(
 ) {
 
     val navController = rememberNavController()
+    LaunchedEffect(incomingSenderUid, incomingEventId) {
+        if (
+            !incomingSenderUid.isNullOrBlank() &&
+            !incomingEventId.isNullOrBlank()
+        ) {
+            navController.navigate(
+                "safety/$incomingSenderUid/$incomingEventId"
+            ) {
+                launchSingleTop = true
+            }
+        }
+    }
     val context = LocalContext.current
 
     var currentLatitude by remember {
