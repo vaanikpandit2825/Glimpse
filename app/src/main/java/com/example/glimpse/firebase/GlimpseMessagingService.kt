@@ -18,6 +18,7 @@ class GlimpseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
+        saveFcmToken(token)
 
         val uid = com.google.firebase.auth.FirebaseAuth
             .getInstance()
@@ -35,7 +36,22 @@ class GlimpseMessagingService : FirebaseMessagingService() {
             .setValue(true)
     }
 
+    private fun saveFcmToken(token: String) {
+        val uid = com.google.firebase.auth.FirebaseAuth
+            .getInstance()
+            .currentUser
+            ?.uid ?: return
 
+        val database = com.google.firebase.database.FirebaseDatabase
+            .getInstance(
+                "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
+            )
+
+        database.getReference("fcmTokens")
+            .child(uid)
+            .child(token)
+            .setValue(true)
+    }
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
