@@ -21,7 +21,6 @@ class FCMTokenRepository {
         android.util.Log.d("GLIMPSE_FCM", "Registering token for UID: $uid")
         FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token ->
-                android.util.Log.d("GLIMPSE_TOKEN", "FCM token: $token")
                 android.util.Log.d(
                     "GLIMPSE_FCM",
                     "FCM token obtained successfully"
