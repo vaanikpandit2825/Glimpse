@@ -50,6 +50,7 @@ private val SafetyBorder = Color(0xFFE7E9F0)
 private enum class SosScreenState {
     Ready,
     Countdown,
+    LoadingIncoming,
     Creating,
     CreateFailed,
     Active
@@ -63,8 +64,18 @@ fun SafetyScreen(
 ) {
     val sosRepository = remember { SOSRepository() }
     val context = LocalContext.current
-
-    var screenState by remember { mutableStateOf(SosScreenState.Ready) }
+    var screenState by remember {
+        mutableStateOf(
+            if(!incomingSenderUid.isNullOrBlank() &&
+                    !incomingEventId.isNullOrBlank()
+                ) {
+                SosScreenState.LoadingIncoming
+            }
+            else{
+                SosScreenState.Ready
+            }
+        )
+    }
     var countdown by remember { mutableIntStateOf(3) }
     var sosEvent by remember { mutableStateOf<SOSEvent?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -79,6 +90,9 @@ fun SafetyScreen(
             SosScreenState.CreateFailed -> {
                 screenState = SosScreenState.Ready
                 errorMessage = null
+            }
+            SosScreenState.LoadingIncoming -> {
+                // No action while loading
             }
 
             SosScreenState.Active -> {
@@ -126,46 +140,27 @@ fun SafetyScreen(
     }
 
 
+
     LaunchedEffect(screenState) {
-        if (screenState == SosScreenState.Creating) {
-            // Incoming alerts load an existing event; they must not create a new one.
-            if (
-                !incomingSenderUid.isNullOrBlank() &&
-                !incomingEventId.isNullOrBlank()
-            ) {
-                sosRepository.getSosEvent(
-                    senderUid = incomingSenderUid,
-                    eventId = incomingEventId,
-                    onSuccess = { event ->
-                        sosEvent = event
-                        errorMessage = null
-                        screenState = SosScreenState.Active
-                    },
-                    onFailure = { error ->
-                        errorMessage = error.localizedMessage
-                            ?: "Couldn't load the existing SOS event."
-                        screenState = SosScreenState.CreateFailed
-                    }
-                )
-            } else {
-                // Normal SOS creation initiated by this user.
-                sosRepository.createSosevents(
-                    onSuccess = { event ->
-                        sosEvent = event
-                        errorMessage = null
-                        screenState = SosScreenState.Active
-                    },
-                    onFailure = { error ->
-                        errorMessage = error.localizedMessage
-                            ?: "Couldn't save the SOS. Please try again."
-                        screenState = SosScreenState.CreateFailed
-                    }
-                )
-            }
+        if (
+            screenState == SosScreenState.Creating &&
+            incomingSenderUid.isNullOrBlank() &&
+            incomingEventId.isNullOrBlank()
+        ) {
+            sosRepository.createSosevents(
+                onSuccess = { event ->
+                    sosEvent = event
+                    errorMessage = null
+                    screenState = SosScreenState.Active
+                },
+                onFailure = { error ->
+                    errorMessage = error.localizedMessage
+                        ?: "Couldn't save the SOS. Please try again."
+                    screenState = SosScreenState.CreateFailed
+                }
+            )
         }
     }
-
-
 
     Scaffold(
         containerColor = SafetyBackground,
@@ -184,6 +179,11 @@ fun SafetyScreen(
                             SosScreenState.Ready -> navController.popBackStack()
 
                             SosScreenState.Countdown,
+
+                            SosScreenState.LoadingIncoming -> {
+                                // No action while loading
+                            }
+
                             SosScreenState.CreateFailed -> {
                                 screenState = SosScreenState.Ready
                                 errorMessage = null
@@ -249,6 +249,9 @@ fun SafetyScreen(
                     SosScreenState.Countdown ->
                         "Countdown running · You can still cancel"
 
+                    SosScreenState.LoadingIncoming ->
+                        "Loading Emergency Details..."
+
                     SosScreenState.Creating ->
                         "Saving your SOS to Firebase…"
 
@@ -277,6 +280,8 @@ fun SafetyScreen(
                 )
 
                 SosScreenState.Creating -> CreatingSosContent()
+
+                SosScreenState.LoadingIncoming -> LoadingIncomingContent()
 
                 SosScreenState.CreateFailed -> SosFailureContent(
                     message = errorMessage ?: "Couldn't save the SOS.",
@@ -799,5 +804,31 @@ private fun StatusCard(
                 lineHeight = 18.sp
             )
         }
+    }
+}
+
+@Composable
+private fun LoadingIncomingContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Loading emergency details...",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Text(
+            text = "Please wait while GLIMPSE retrieves the SOS event.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
     }
 }
