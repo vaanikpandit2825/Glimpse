@@ -73,27 +73,22 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation("com.cloudinary:cloudinary-android:3.1.2")
     implementation(libs.maplibre.compose)
-
-
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.9.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-database")
-
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
     testImplementation(libs.junit)
-
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
-
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
     implementation(libs.coil.compose)
-
     implementation(libs.zxing.core)
     implementation("com.google.firebase:firebase-messaging")
 }
