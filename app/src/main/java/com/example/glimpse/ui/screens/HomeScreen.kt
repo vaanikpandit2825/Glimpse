@@ -88,6 +88,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import com.example.glimpse.network.SosBackend
 
 private val GlimpseBlue = Color(0xFF4F46E5)
 private val GlimpseBlueLight = Color(0xFF6C7BFF)
@@ -333,9 +334,20 @@ fun HomeScreen(
                     onSuccess = { event ->
                         sosCreating = false
                         sosDialogVisible = false
-
                         vibrate(context, 350L)
-
+                        scope.launch{
+                            val result= SosBackend.notifySos(
+                                senderUid = currentUser?.uid.orEmpty(),
+                                eventId=event.id
+                            )
+                            result.onFailure {error->
+                                Log.e(
+                                    "GLIMPSE_HOME_SOS",
+                                    "SOS notification request failed",
+                                    error
+                                )
+                            }
+                        }
                         navController.navigate("safety/${event.id}") {
                             launchSingleTop = true
                         }
