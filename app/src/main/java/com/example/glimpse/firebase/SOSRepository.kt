@@ -23,8 +23,6 @@ class SOSRepository(
         private const val STATUS_ACTIVE = "active"
         private const val STATUS_CANCELLED = "cancelled"
         private const val STATUS_RESOLVED = "resolved"
-
-        // Location older than this is considered stale.
         private const val MAX_LOCATION_AGE_MS = 2 * 60 * 1000L
     }
 
@@ -176,7 +174,8 @@ class SOSRepository(
                     event.userUid != senderUid ->
                         onFailure(Exception("SOS sender verification failed."))
 
-                    event.recipientUids[recipientUid] != true ->
+                    recipientUid != senderUid &&
+                            event.recipientUids[recipientUid] != true ->
                         onFailure(Exception("You are not an intended recipient of this SOS."))
 
                     else -> onSuccess(event)
