@@ -348,7 +348,7 @@ fun HomeScreen(
                                 )
                             }
                         }
-                        navController.navigate("safety/${event.id}") {
+                        navController.navigate("safety/${event.userUid}/${event.id}") {
                             launchSingleTop = true
                         }
                     },
