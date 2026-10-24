@@ -1,4 +1,3 @@
-
 package com.example.glimpse.firebase
 
 import com.example.glimpse.model.SOSEvent
