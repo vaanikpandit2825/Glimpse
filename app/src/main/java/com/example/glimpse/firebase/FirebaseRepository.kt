@@ -933,4 +933,17 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
+
+    fun getSharedLocation(
+        myUid:String,
+        onResult: (List<UserLocation>)->Unit
+    ){
+        getConnections(
+            uid = myUid,
+            onResult={connections->
+                
+            }
+        )
+    }
 }
+
