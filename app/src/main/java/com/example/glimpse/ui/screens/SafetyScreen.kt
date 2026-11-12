@@ -38,6 +38,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.platform.LocalContext
 import com.example.glimpse.ui.screens.vibrate
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.clickable
 private val SafetyPurple = Color(0xFF4F46E5)
 private val SafetyPurpleSoft = Color(0xFFEDEBFF)
 private val SafetyRed = Color(0xFFDC3545)
@@ -181,7 +182,7 @@ fun SafetyScreen(
                             SosScreenState.Countdown,
 
                             SosScreenState.LoadingIncoming -> {
-                                // No action while loading
+
                             }
 
                             SosScreenState.CreateFailed -> {
@@ -266,11 +267,18 @@ fun SafetyScreen(
             Spacer(Modifier.height(22.dp))
 
             when (screenState) {
-                SosScreenState.Ready -> ReadyContent {
-                    countdown = 3
-                    errorMessage = null
-                    screenState = SosScreenState.Countdown
-                }
+                SosScreenState.Ready -> ReadyContent(
+                    onHoldComplete = {
+                        countdown = 3
+                        errorMessage = null
+                        screenState = SosScreenState.Countdown
+                    },
+                    onEmergencyContacts = {
+                        navController.navigate("emergencyContacts") {
+                            launchSingleTop = true
+                        }
+                    }
+                )
 
                 SosScreenState.Countdown -> CountdownContent(
                     seconds = countdown,
@@ -336,7 +344,10 @@ private fun PreviewNotice(message: String) {
 }
 
 @Composable
-private fun ReadyContent(onHoldComplete: () -> Unit) {
+private fun ReadyContent(
+    onHoldComplete: () -> Unit,
+    onEmergencyContacts: () -> Unit
+) {
     var isHolding by remember { mutableStateOf(false) }
 
     val holdProgress by animateFloatAsState(
@@ -461,8 +472,9 @@ private fun ReadyContent(onHoldComplete: () -> Unit) {
                 tint = SafetyPurple
             )
         },
-        title = "Trusted contacts",
-        description = "Contact notifications still need to be configured."
+        title = "Emergency Contacts",
+        description = "Add and manage your trusted emergency contacts.",
+        onClick = onEmergencyContacts
     )
 }
 
@@ -702,10 +714,19 @@ private fun ActiveSosContent(
 private fun InfoCard(
     icon: @Composable () -> Unit,
     title: String,
-    description: String
-) {
+    description: String,
+    onClick: (() -> Unit)? = null
+){
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
