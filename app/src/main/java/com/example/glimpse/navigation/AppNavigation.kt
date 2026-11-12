@@ -49,6 +49,7 @@ import com.example.glimpse.ui.screens.MemberProfileScreen
 import com.example.glimpse.ui.screens.SafetyScreen
 import androidx.compose.runtime.LaunchedEffect
 import com.example.glimpse.ui.screens.EmergencyContactsScreen
+import com.example.glimpse.ui.screens.AddEmergencyContactScreen
 
 @Composable
 fun AppNavigation(
@@ -641,7 +642,16 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onAddContact = {
-
+                    navController.navigate("addEmergencyContact"){
+                        launchSingleTop=true
+                    }
+                }
+            )
+        }
+        composable("addEmergencyContact"){
+            AddEmergencyContactScreen(
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
