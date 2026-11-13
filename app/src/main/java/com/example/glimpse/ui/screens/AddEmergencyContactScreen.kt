@@ -44,6 +44,7 @@ fun AddEmergencyContactScreen(
     val uid = FirebaseAuth.getInstance().currentUser?.uid
 
     var searchQuery by remember { mutableStateOf("") }
+    val selectedContactUids=remember{ mutableStateListOf<String>()}
     var connections by remember {
         mutableStateOf<List<ConnectionRequest>>(emptyList())
     }
@@ -259,8 +260,15 @@ fun AddEmergencyContactScreen(
 
                             EmergencyConnectionCard(
                                 connection = connection,
-                                onInvite = {
-                                    showInviteNotice = true
+                                isSelected = selectedContactUids.contains(connection.senderUid),
+                                onSelectionChange = { selected ->
+                                    if (selected) {
+                                        if (!selectedContactUids.contains(connection.senderUid)) {
+                                            selectedContactUids.add(connection.senderUid)
+                                        }
+                                    } else {
+                                        selectedContactUids.remove(connection.senderUid)
+                                    }
                                 }
                             )
                         }
@@ -269,7 +277,6 @@ fun AddEmergencyContactScreen(
             }
         }
     }
-
     if (showInviteNotice) {
         AlertDialog(
             onDismissRequest = {
@@ -295,11 +302,11 @@ fun AddEmergencyContactScreen(
         )
     }
 }
-
 @Composable
 private fun EmergencyConnectionCard(
     connection: ConnectionRequest,
-    onInvite: () -> Unit
+    isSelected: Boolean,
+    onSelectionChange: (Boolean) -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -311,7 +318,6 @@ private fun EmergencyConnectionCard(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -338,9 +344,7 @@ private fun EmergencyConnectionCard(
                     )
                 }
             }
-
             Spacer(Modifier.width(12.dp))
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = connection.name.ifBlank { "GLIMPSE User" },
@@ -350,35 +354,23 @@ private fun EmergencyConnectionCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Spacer(Modifier.height(4.dp))
-
                 Text(
                     text = "Connected",
                     color = EmergencyMuted,
                     fontSize = 12.sp
                 )
             }
-
-            OutlinedButton(
-                onClick = onInvite,
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(
-                    1.dp,
-                    EmergencyPurple
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = onSelectionChange,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = EmergencyPurple,
+                    uncheckedColor = EmergencyMuted,
+                    checkmarkColor = Color.White
                 ),
-                contentPadding = PaddingValues(
-                    horizontal = 14.dp,
-                    vertical = 6.dp
-                )
-            ) {
-                Text(
-                    text = "Invite",
-                    color = EmergencyPurple,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp
-                )
-            }
+                modifier = Modifier.size(48.dp)
+            )
         }
     }
 }
