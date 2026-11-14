@@ -30,6 +30,7 @@ class EmergencyContactRepository {
             )
             return
         }
+
         emergencyContactsRef
             .child(uid)
             .get()
@@ -42,5 +43,61 @@ class EmergencyContactRepository {
             .addOnFailureListener { error ->
                 onFailure(error)
             }
+
+        fun isConnectedTo(
+            contactUid: String,
+            onResult: (Boolean) -> Unit,
+            onFailure: (Exception) -> Unit
+        ) {
+            val requesterUid = currentUserUid() ?: run {
+                onFailure(
+                    IllegalStateException("User is not signed in")
+                )
+                return
+            }
+
+            if (contactUid.isBlank() || contactUid == requesterUid) {
+                onResult(false)
+                return
+            }
+            database
+                .child("connections")
+                .child(requesterUid)
+                .child(contactUid)
+                .child("status")
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    val status = snapshot.getValue(String::class.java)
+
+                    onResult(status == "connected")
+                }
+                .addOnFailureListener { error ->
+                    onFailure(error)
+                }
+        }
+        fun getIncomingRequesterUids(
+            onSuccess:(List<String>)->Unit,
+            onFailure:(Exception)->Unit
+        ){
+            val uid=currentUserUid()?:run{
+                onFailure(
+                    IllegalStateException("User is not signed in")
+                )
+                return
+            }
+            database
+                .child("emergencyContactInbox")
+                .child(uid)
+                .get()
+                .addOnSuccessListener { snapshot->
+                    val requesterUids=snapshot.children.mapNotNull {
+                        it.key
+                    }
+                    onSuccess(requesterUids)
+                }
+                .addOnFailureListener { error->
+                    onFailure(error)
+                }
+        }
     }
 }
