@@ -75,32 +75,77 @@ class FirebaseRepository {
     }
 
 
+
     fun getUsersLocations(
         onResult: (List<UserLocation>) -> Unit
     ) {
-        locationsRef.get()
-            .addOnSuccessListener { snapshot ->
+        val myUid = FirebaseAuth.getInstance().currentUser?.uid
 
-                val locations = snapshot.children.mapNotNull { child ->
+        if (myUid == null) {
+            onResult(emptyList())
+            return
+        }
 
-                    val location =
-                        child.getValue(UserLocation::class.java)
+        fun loadLocations(uids: List<String>) {
+            val locations = mutableListOf<UserLocation>()
+            var remaining = uids.size
 
-                    location?.copy(
-                        uid = child.key ?: ""
-                    )
-                }
+            uids.forEach { uid ->
+                locationsRef.child(uid)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        snapshot.getValue(UserLocation::class.java)
+                            ?.copy(uid = uid)
+                            ?.let { locations.add(it) }
 
-                onResult(locations)
+                        remaining--
+
+                        if (remaining == 0) {
+                            onResult(locations)
+                        }
+                    }
+                    .addOnFailureListener { error ->
+                        Log.e(
+                            "FIREBASE",
+                            "Failed to read location for $uid",
+                            error
+                        )
+
+                        remaining--
+
+                        if (remaining == 0) {
+                            onResult(locations)
+                        }
+                    }
             }
-            .addOnFailureListener { error ->
+        }
+
+        getConnections(
+            uid = myUid,
+
+            onResult = { connections ->
+                val allowedUids = (
+                        listOf(myUid) +
+                                connections
+                                    .filter { it.senderSharing.location }
+                                    .map { it.senderUid }
+                        ).distinct()
+
+                loadLocations(allowedUids)
+            },
+
+            onFailure = { error ->
                 Log.e(
                     "FIREBASE",
-                    "Failed to fetch locations",
+                    "Failed to load connections",
                     error
                 )
+
+                loadLocations(listOf(myUid))
             }
+        )
     }
+
 
     fun updateProfilePhoto(
         uid: String,
@@ -773,20 +818,29 @@ class FirebaseRepository {
             }
     }
 
+
     fun createGroup(
         group: GlimpseGroup,
         onSuccess: () -> Unit,
-        onFailure:(Exception)->Unit
-    ){
-        groupsRef.child(group.id)
-            .setValue(group)
+        onFailure: (Exception) -> Unit
+    ) {
+        val updates = mutableMapOf<String, Any?>(
+            "groups/${group.id}" to group
+        )
+
+        group.members.keys.forEach { memberUid ->
+            updates["userGroups/$memberUid/${group.id}"] = true
+        }
+        database.reference
+            .updateChildren(updates)
             .addOnSuccessListener {
                 onSuccess()
             }
-            .addOnFailureListener {
-                onFailure(it)
+            .addOnFailureListener { error ->
+                onFailure(error)
             }
     }
+
 
     fun getGroup(
         uid: String,
@@ -812,54 +866,159 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
+
+    fun getIndexedGroups(
+        uid: String,
+        onSuccess: (List<GlimpseGroup>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val signedInUid = FirebaseAuth.getInstance()
+            .currentUser?.uid
+        if (signedInUid != uid) {
+            onFailure(
+                IllegalStateException("Not authorized to load these groups")
+            )
+            return
+        }
+        database.getReference("userGroups")
+            .child(uid)
+            .get()
+            .addOnSuccessListener { indexSnapshot ->
+
+                val groupIds = indexSnapshot.children
+                    .mapNotNull { it.key }
+                    .distinct()
+
+                if (groupIds.isEmpty()) {
+                    onSuccess(emptyList())
+                    return@addOnSuccessListener
+                }
+                val groups = mutableListOf<GlimpseGroup>()
+                var remaining = groupIds.size
+                var firstError: Exception? = null
+
+                fun completeOne() {
+                    remaining--
+
+                    if (remaining == 0) {
+                        val error = firstError
+
+                        if (error != null) {
+                            onFailure(error)
+                        } else {
+                            onSuccess(groups)
+                        }
+                    }
+                }
+                groupIds.forEach { groupId ->
+                    groupsRef.child(groupId)
+                        .get()
+                        .addOnSuccessListener { snapshot ->
+
+                            val group = snapshot.getValue(
+                                GlimpseGroup::class.java
+                            )
+                            if (group != null &&
+                                group.members.containsKey(uid)
+                            ) {
+                                groups.add(group)
+                            }
+                            completeOne()
+                        }
+                        .addOnFailureListener { error ->
+                            if (firstError == null) {
+                                firstError = error
+                            }
+
+                            completeOne()
+                        }
+                }
+            }
+            .addOnFailureListener { error ->
+                onFailure(error)
+            }
+    }
     fun addMembersToGroup(
-        groupId:String,
-        uid:String,
+        groupId: String,
+        uid: String,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
-    ){
-        groupsRef.child(groupId)
-            .child("members")
-            .child(uid)
-            .setValue(true)
+    ) {
+        val updates = mapOf<String, Any>(
+            "groups/$groupId/members/$uid" to true,
+            "userGroups/$uid/$groupId" to true
+        )
+        database.reference
+            .updateChildren(updates)
             .addOnSuccessListener {
                 onSuccess()
             }
-            .addOnFailureListener {
-                onFailure(it)
+            .addOnFailureListener { error ->
+                onFailure(error)
             }
     }
+
+
     fun removeMemberFromGroup(
         groupId: String,
         uid: String,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        groupsRef.child(groupId)
-            .child("members")
-            .child(uid)
-            .removeValue()
+        val updates = mapOf<String, Any?>(
+            "groups/$groupId/members/$uid" to null,
+            "userGroups/$uid/$groupId" to null
+        )
+        database.reference
+            .updateChildren(updates)
             .addOnSuccessListener {
                 onSuccess()
             }
-            .addOnFailureListener {
-                onFailure(it)
+            .addOnFailureListener { error ->
+                onFailure(error)
             }
     }
+
+
     fun deleteGroup(
-        groupId:String,
+        groupId: String,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
-    ){
-        groupsRef.child(groupId)
-            .removeValue()
-            .addOnSuccessListener {
-                onSuccess()
+    ) {
+        val groupRef = groupsRef.child(groupId)
+        groupRef.get()
+            .addOnSuccessListener { snapshot ->
+                if (!snapshot.exists()) {
+                    onFailure(
+                        IllegalStateException("Group not found")
+                    )
+                    return@addOnSuccessListener
+                }
+                val memberUids = snapshot
+                    .child("members")
+                    .children
+                    .mapNotNull { it.key }
+
+                val updates = mutableMapOf<String, Any?>(
+                    "groups/$groupId" to null
+                )
+                memberUids.forEach { uid ->
+                    updates["userGroups/$uid/$groupId"] = null
+                }
+                database.reference
+                    .updateChildren(updates)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener { error ->
+                        onFailure(error)
+                    }
             }
-            .addOnFailureListener {
-                onFailure(it)
+            .addOnFailureListener { error ->
+                onFailure(error)
             }
     }
+
     fun getGroupMembers(
         memberIds: List<String>,
         onSuccess: (List<GroupMember>) -> Unit,
