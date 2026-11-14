@@ -517,6 +517,18 @@ class FirebaseRepository {
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
+
+        val signedInUid = FirebaseAuth.getInstance().currentUser?.uid
+
+        if (signedInUid != receiverUid || senderUid == receiverUid) {
+            onFailure(
+                IllegalStateException(
+                    "You are not authorized to accept this connection request."
+                )
+            )
+            return
+        }
+
         val requestRef = connectionRequestsRef
             .child(receiverUid)
             .child(senderUid)
@@ -539,6 +551,18 @@ class FirebaseRepository {
 
         requestRef.get()
             .addOnSuccessListener { snapshot ->
+                val requestStatus = snapshot
+                    .child("status")
+                    .getValue(String::class.java)
+
+                if (requestStatus != "pending") {
+                    onFailure(
+                        IllegalStateException(
+                            "This connection request is no longer pending."
+                        )
+                    )
+                    return@addOnSuccessListener
+                }
                 val senderSharing = mapOf(
                     "location" to (snapshot.child("senderSharing/location")
                         .getValue(Boolean::class.java) ?: false),
