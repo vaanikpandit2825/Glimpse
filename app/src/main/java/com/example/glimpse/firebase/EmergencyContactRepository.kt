@@ -4,8 +4,8 @@ import androidx.compose.animation.core.rememberTransition
 import com.example.glimpse.model.EmergencyContact
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
-
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ServerValue
 
 class EmergencyContactRepository {
     private val auth: FirebaseAuth =
@@ -98,6 +98,71 @@ class EmergencyContactRepository {
                 .addOnFailureListener { error->
                     onFailure(error)
                 }
+        }
+        fun createPendingInvitation(
+            contactUid: String,
+            onSuccess: () -> Unit,
+            onFailure: (Exception) -> Unit
+        ) {
+            val requesterUid = currentUserUid() ?: run {
+                onFailure(
+                    IllegalStateException("User is not signed in")
+                )
+                return
+            }
+            isConnectedTo(
+                contactUid = contactUid,
+                onResult = { isConnected ->
+                    if (!isConnected) {
+                        onFailure(
+                            IllegalStateException(
+                                "You can only invite existing connections."
+                            )
+                        )
+                    } else {
+                        val invitationRef = emergencyContactsRef
+                            .child(requesterUid)
+                            .child(contactUid)
+                        invitationRef.get()
+                            .addOnSuccessListener { snapshot ->
+
+                                if (snapshot.exists()) {
+                                    onFailure(
+                                        IllegalStateException(
+                                            "An invitation already exists."
+                                        )
+                                    )
+                                } else {
+                                    val invitationData = mapOf(
+                                        "requesterUid" to requesterUid,
+                                        "contactUid" to contactUid,
+                                        "status" to EmergencyContact.STATUS_PENDING,
+                                        "createdAt" to ServerValue.TIMESTAMP,
+                                        "updatedAt" to ServerValue.TIMESTAMP
+                                    )
+                                    val updates: Map<String, Any> = mapOf(
+                                        "emergencyContacts/$requesterUid/$contactUid"
+                                                to invitationData,
+
+                                        "emergencyContactInbox/$contactUid/$requesterUid"
+                                                to true
+                                    )
+                                    database.updateChildren(updates)
+                                        .addOnSuccessListener {
+                                            onSuccess()
+                                        }
+                                        .addOnFailureListener { error ->
+                                            onFailure(error)
+                                        }
+                                }
+                            }
+                            .addOnFailureListener { error ->
+                                onFailure(error)
+                            }
+                    }
+                },
+                onFailure = onFailure
+            )
         }
     }
 }
