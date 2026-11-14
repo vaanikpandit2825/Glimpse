@@ -28,6 +28,7 @@ import coil.compose.AsyncImage
 import com.example.glimpse.firebase.FirebaseRepository
 import com.example.glimpse.model.ConnectionRequest
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.selects.select
 
 private val EmergencyPurple = Color(0xFF4F46E5)
 private val EmergencyPurpleSoft = Color(0xFFEDEBFF)
@@ -113,6 +114,45 @@ fun AddEmergencyContactScreen(
                     )
                 }
             }
+        },
+        bottomBar = {
+            Surface(
+                color=EmergencyBackground,
+                shadowElevation = 6.dp
+            ){
+                Button(
+                    onClick={
+                      showInviteNotice=true
+                    },
+                    enabled = selectedContactUids.isNotEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(
+                            vertical=12.dp,
+                            horizontal = 20.dp
+                        )
+                        .height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = EmergencyPurple,
+                        contentColor = Color.White,
+                        disabledContainerColor = EmergencyPurpleSoft,
+                        disabledContentColor = EmergencyMuted
+                    )
+                ){
+                   Text(
+                       text = if(selectedContactUids.isEmpty()){
+                           "Select contacts to send invite"
+                       }
+                       else{
+                           "Send invitations (${selectedContactUids.size})"
+                       },
+                       fontWeight = FontWeight.SemiBold,
+                       fontSize = 15.sp
+                   )
+                }
+            }
         }
     ) { padding ->
 
@@ -125,8 +165,6 @@ fun AddEmergencyContactScreen(
         ) {
 
             Spacer(Modifier.height(4.dp))
-
-            // Information banner
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -152,7 +190,6 @@ fun AddEmergencyContactScreen(
                 )
             }
 
-            // Search field
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
