@@ -1,0 +1,200 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "profiles": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "name": {
+          ".read": "auth != null",
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "profilePhotoUrl": {
+          ".read": "auth != null",
+          ".validate": "newData.isString() && newData.val().length <= 2048"
+        },
+        "glimpseId": {
+          ".read": "auth != null",
+          ".validate": "newData.isString() && newData.val().length === 8 && (!data.exists() || data.val() === newData.val()) && root.child('glimpseIds').child(newData.val()).val() === $uid"
+        }
+      }
+    },
+    "glimpseIds": {
+      "$glimpseId": {
+        ".read": "auth != null",
+        ".write": "auth != null && $glimpseId.length === 8 && !data.exists() && newData.isString() && newData.val() === auth.uid"
+      }
+    },
+    "fcmTokens": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "SavedPlaces": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "connectionRequests": {
+      "$receiverUid": {
+        ".read": "auth != null && auth.uid === $receiverUid",
+        "$senderUid": {
+          ".read": "auth != null && auth.uid === $senderUid",
+          ".write": "auth != null && $receiverUid !== $senderUid && ((auth.uid === $senderUid && !data.exists() && newData.child('status').val() === 'pending' && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 300000 && newData.child('createdAt').val() <= now + 30000 && newData.child('senderSharing').hasChildren(['location','profile','locationHistory'])) || ((auth.uid === $receiverUid || auth.uid === $senderUid) && data.exists() && !newData.exists()))",
+          ".validate": "newData.hasChildren(['status','createdAt','senderSharing'])",
+          "status": {
+            ".validate": "newData.val() === 'pending'"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "senderSharing": {
+            "location": {
+              ".validate": "newData.isBoolean()"
+            },
+            "profile": {
+              ".validate": "newData.isBoolean()"
+            },
+            "locationHistory": {
+              ".validate": "newData.isBoolean()"
+            },
+            ".validate": "newData.hasChildren(['location','profile','locationHistory'])",
+            "$other": {
+              ".validate": false
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "connections": {
+      "$ownerUid": {
+        ".read": "auth != null && auth.uid === $ownerUid",
+        "$partnerUid": {
+          ".write": "auth != null && $ownerUid !== $partnerUid && !data.exists() && newData.child('status').val() === 'connected' && newData.child('connectedAt').isNumber() && newData.child('connectedAt').val() >= now - 300000 && newData.child('connectedAt').val() <= now + 30000 && ((auth.uid === $ownerUid && root.child('connectionRequests').child($ownerUid).child($partnerUid).child('status').val() === 'pending' && newData.child('partnerSharing').child('location').val() === root.child('connectionRequests').child($ownerUid).child($partnerUid).child('senderSharing').child('location').val() && newData.child('partnerSharing').child('profile').val() === root.child('connectionRequests').child($ownerUid).child($partnerUid).child('senderSharing').child('profile').val() && newData.child('partnerSharing').child('locationHistory').val() === root.child('connectionRequests').child($ownerUid).child($partnerUid).child('senderSharing').child('locationHistory').val()) || (auth.uid === $partnerUid && root.child('connectionRequests').child($partnerUid).child($ownerUid).child('status').val() === 'pending' && newData.child('sharing').child('location').val() === root.child('connectionRequests').child($partnerUid).child($ownerUid).child('senderSharing').child('location').val() && newData.child('sharing').child('profile').val() === root.child('connectionRequests').child($partnerUid).child($ownerUid).child('senderSharing').child('profile').val() && newData.child('sharing').child('locationHistory').val() === root.child('connectionRequests').child($partnerUid).child($ownerUid).child('senderSharing').child('locationHistory').val()))",
+          ".validate": "newData.hasChildren(['status','connectedAt','sharing','partnerSharing'])",
+          "status": {
+            ".validate": "newData.val() === 'connected'"
+          },
+          "connectedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "sharing": {
+            "location": {
+              ".validate": "newData.isBoolean()"
+            },
+            "profile": {
+              ".validate": "newData.isBoolean()"
+            },
+            "locationHistory": {
+              ".validate": "newData.isBoolean()"
+            },
+            ".validate": "newData.hasChildren(['location','profile','locationHistory'])",
+            "$other": {
+              ".validate": false
+            }
+          },
+          "partnerSharing": {
+            "location": {
+              ".validate": "newData.isBoolean()"
+            },
+            "profile": {
+              ".validate": "newData.isBoolean()"
+            },
+            "locationHistory": {
+              ".validate": "newData.isBoolean()"
+            },
+            ".validate": "newData.hasChildren(['location','profile','locationHistory'])",
+            "$other": {
+              ".validate": false
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "locations": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (root.child('connections').child($uid).child(auth.uid).child('status').val() === 'connected' && root.child('connections').child($uid).child(auth.uid).child('sharing').child('location').val() === true))",
+        ".write": "auth != null && auth.uid === $uid && newData.exists()",
+        ".validate": "newData.hasChildren(['latitude','longitude','timestamp'])",
+        "latitude": {
+          ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+        },
+        "longitude": {
+          ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber() && newData.val() >= now - 86400000 && newData.val() <= now + 30000"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "groups": {
+      "$groupId": {
+        ".read": "auth != null && data.child('members').child(auth.uid).val() === true",
+        ".write": "auth != null && ((!data.exists() && newData.child('ownerUid').val() === auth.uid && newData.child('id').val() === $groupId && newData.child('members').child(auth.uid).val() === true) || (data.exists() && data.child('ownerUid').val() === auth.uid && newData.child('ownerUid').val() === auth.uid && newData.child('id').val() === $groupId))"
+      }
+    },
+    "sosEvents": {
+      "$senderUid": {
+        "$eventId": {
+          ".read": "auth != null && (auth.uid === $senderUid || data.child('recipients').child(auth.uid).val() === true)",
+          ".write": "auth != null && auth.uid === $senderUid && newData.exists() && newData.child('senderUid').val() === $senderUid"
+        }
+      }
+    },
+    "emergencyContacts": {
+      "$requesterUid": {
+        ".read": "auth != null && auth.uid === $requesterUid",
+        "$contactUid": {
+          ".read": "auth != null && auth.uid === $contactUid",
+          ".write": "auth != null && $requesterUid !== $contactUid && newData.exists() && ((auth.uid === $requesterUid && !data.exists() && root.child('connections').child($requesterUid).child($contactUid).child('status').val() === 'connected' && root.child('connections').child($contactUid).child($requesterUid).child('status').val() === 'connected' && newData.child('requesterUid').val() === $requesterUid && newData.child('contactUid').val() === $contactUid && newData.child('status').val() === 'pending' && newData.child('createdAt').val() === now && newData.child('updatedAt').val() === now) || (auth.uid === $contactUid && data.child('status').val() === 'pending' && (newData.child('status').val() === 'accepted' || newData.child('status').val() === 'declined') && newData.child('requesterUid').val() === data.child('requesterUid').val() && newData.child('contactUid').val() === data.child('contactUid').val() && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('updatedAt').val() === now) || ((auth.uid === $requesterUid || auth.uid === $contactUid) && (data.child('status').val() === 'pending' || data.child('status').val() === 'accepted') && newData.child('status').val() === 'cancelled' && newData.child('requesterUid').val() === data.child('requesterUid').val() && newData.child('contactUid').val() === data.child('contactUid').val() && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('updatedAt').val() === now))",
+          ".validate": "newData.hasChildren(['requesterUid','contactUid','status','createdAt','updatedAt'])",
+          "requesterUid": {
+            ".validate": "newData.isString() && newData.val() === $requesterUid"
+          },
+          "contactUid": {
+            ".validate": "newData.isString() && newData.val() === $contactUid"
+          },
+          "status": {
+            ".validate": "newData.val() === 'pending' || newData.val() === 'accepted' || newData.val() === 'declined' || newData.val() === 'cancelled'"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "emergencyContactInbox": {
+      "$contactUid": {
+        ".read": "auth != null && auth.uid === $contactUid",
+        "$requesterUid": {
+          ".write": "auth != null && $requesterUid !== $contactUid && ((auth.uid === $requesterUid && !data.exists() && newData.val() === true && root.child('connections').child($requesterUid).child($contactUid).child('status').val() === 'connected' && root.child('connections').child($contactUid).child($requesterUid).child('status').val() === 'connected') || (auth.uid === $contactUid && data.exists() && !newData.exists()))",
+          ".validate": "newData.val() === true"
+        }
+      }
+    }
+  }
+}
