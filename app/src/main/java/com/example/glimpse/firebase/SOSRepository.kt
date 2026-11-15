@@ -46,25 +46,38 @@ class SOSRepository(
 
         locationRef.child(uid).get()
             .addOnSuccessListener { locationSnapshot ->
-                connectionRef.child(uid).get()
-                    .addOnSuccessListener { connectionSnapshot ->
+
+                database.getReference("emergencyContacts")
+                    .child(uid)
+                    .get()
+                    .addOnSuccessListener contactsLoaded@{ contactsSnapshot ->
                         try {
                             val recipients = mutableMapOf<String, Boolean>()
 
-                            connectionSnapshot.children.forEach { connection ->
-                                val partnerUid = connection.key
-                                val status = connection
+                            contactsSnapshot.children.forEach { contact ->
+                                val contactUid = contact.key
+                                val status = contact
                                     .child("status")
                                     .getValue(String::class.java)
 
                                 if (
-                                    !partnerUid.isNullOrBlank() &&
-                                    partnerUid != uid &&
-                                    status == "connected"
+                                    !contactUid.isNullOrBlank() &&
+                                    contactUid != uid &&
+                                    status == "accepted"
                                 ) {
-                                    recipients[partnerUid] = true
+                                    recipients[contactUid] = true
                                 }
                             }
+
+                            if (recipients.isEmpty()) {
+                                onFailure(
+                                    IllegalStateException(
+                                        "No accepted emergency contacts found."
+                                    )
+                                )
+                                return@contactsLoaded
+                            }
+
 
                             val now = System.currentTimeMillis()
 
@@ -108,9 +121,6 @@ class SOSRepository(
                                 },
                                 recipientUids = recipients
                             )
-
-                            // Keep the saved Firebase structure aligned
-                            // with the SOSEvent model.
                             val record = mapOf(
                                 "id" to event.id,
                                 "userUid" to event.userUid,
@@ -142,8 +152,6 @@ class SOSRepository(
                 onFailure(error)
             }
     }
-
-
     fun getSosEvent(
         senderUid: String,
         eventId: String,
@@ -161,7 +169,6 @@ class SOSRepository(
             onFailure(Exception("Sender UID and SOS event ID are required."))
             return
         }
-
         sosEventsRef.child(senderUid).child(eventId).get()
             .addOnSuccessListener { snapshot ->
                 val event = snapshot.getValue(SOSEvent::class.java)
@@ -184,8 +191,6 @@ class SOSRepository(
                 onFailure(error)
             }
     }
-
-
     fun cancelSosEvent(
         eventId: String,
         onSuccess: () -> Unit,
@@ -198,7 +203,6 @@ class SOSRepository(
             onFailure = onFailure
         )
     }
-
     fun resolveSosEvent(
         eventId: String,
         onSuccess: () -> Unit,
@@ -211,7 +215,6 @@ class SOSRepository(
             onFailure = onFailure
         )
     }
-
     private fun updateActiveEventStatus(
         eventId: String,
         newStatus: String,
@@ -221,55 +224,57 @@ class SOSRepository(
         val uid = auth.currentUser?.uid
 
         if (uid.isNullOrBlank()) {
-            onFailure(Exception("You must be logged in to update an SOS event."))
+            onFailure(Exception("You must be logged in."))
             return
         }
-
         if (eventId.isBlank()) {
             onFailure(Exception("SOS event ID cannot be empty."))
             return
         }
+        if (newStatus != STATUS_CANCELLED &&
+            newStatus != STATUS_RESOLVED
+        ) {
+            onFailure(Exception("Invalid SOS status."))
+            return
+        }
+        val eventRef = sosEventsRef
+            .child(uid)
+            .child(eventId)
+        eventRef.get()
+            .addOnSuccessListener { snapshot ->
 
-        val eventRef = sosEventsRef.child(uid).child(eventId)
-
-        eventRef.runTransaction(object : Transaction.Handler {
-            override fun doTransaction(
-                currentData: MutableData
-            ): Transaction.Result {
-                if (currentData.value == null) {
-                    return Transaction.abort()
+                if (!snapshot.exists()) {
+                    onFailure(Exception("SOS event not found."))
+                    return@addOnSuccessListener
                 }
-
-                val currentStatus = currentData
+                val currentStatus = snapshot
                     .child("status")
                     .getValue(String::class.java)
 
                 if (currentStatus != STATUS_ACTIVE) {
-                    return Transaction.abort()
-                }
-
-                currentData.child("status").value = newStatus
-                currentData.child("updatedAt").value =
-                    System.currentTimeMillis()
-
-                return Transaction.success(currentData)
-            }
-
-            override fun onComplete(
-                error: DatabaseError?,
-                committed: Boolean,
-                currentData: DataSnapshot?
-            ) {
-                when {
-                    error != null -> onFailure(error.toException())
-                    committed -> onSuccess()
-                    else -> onFailure(
-                        Exception(
-                            "SOS event does not exist or is no longer active."
-                        )
+                    onFailure(
+                        Exception("SOS event is no longer active.")
                     )
+                    return@addOnSuccessListener
                 }
+                val updates = mapOf<String, Any?>(
+                    "status" to newStatus,
+                    "updatedAt" to
+                            com.google.firebase.database
+                                .ServerValue.TIMESTAMP
+                )
+
+                eventRef.updateChildren(updates)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener { error ->
+                        onFailure(error)
+                    }
             }
-        })
+            .addOnFailureListener { error ->
+                onFailure(error)
+            }
     }
+
 }
