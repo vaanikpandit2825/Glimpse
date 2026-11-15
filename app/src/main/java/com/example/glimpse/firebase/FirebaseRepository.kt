@@ -413,32 +413,31 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
-
     fun getUserProfile(
         uid: String,
         onResult: (name: String, profilePhotoUrl: String) -> Unit,
         onFailure: (Exception) -> Unit = {}
     ) {
-        profilesRef
-            .child(uid)
-            .get()
-            .addOnSuccessListener { snapshot ->
-
-                val name = snapshot
-                    .child("name")
+        val profileRef = profilesRef.child(uid)
+        profileRef.child("name").get()
+            .addOnSuccessListener { nameSnapshot ->
+                val name = nameSnapshot
                     .getValue(String::class.java) ?: ""
+                profileRef.child("profilePhotoUrl").get()
+                    .addOnSuccessListener { photoSnapshot ->
+                        val profilePhotoUrl = photoSnapshot
+                            .getValue(String::class.java) ?: ""
 
-                val profilePhotoUrl = snapshot
-                    .child("profilePhotoUrl")
-                    .getValue(String::class.java) ?: ""
-
-                onResult(name, profilePhotoUrl)
+                        onResult(name, profilePhotoUrl)
+                    }
+                    .addOnFailureListener { error ->
+                        onFailure(error)
+                    }
             }
-            .addOnFailureListener {
-                onFailure(it)
+            .addOnFailureListener { error ->
+                onFailure(error)
             }
     }
-
     fun getIncomingConnectionRequests(
         receiverUid: String,
         onResult: (List<ConnectionRequest>) -> Unit,
@@ -817,54 +816,60 @@ class FirebaseRepository {
                 onFailure(it)
             }
     }
-
-
     fun createGroup(
         group: GlimpseGroup,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        val updates = mutableMapOf<String, Any?>(
-            "groups/${group.id}" to group
-        )
-
-        group.members.keys.forEach { memberUid ->
-            updates["userGroups/$memberUid/${group.id}"] = true
-        }
-        database.reference
-            .updateChildren(updates)
+        val groupRef = groupsRef.child(group.id)
+        groupRef.setValue(group)
             .addOnSuccessListener {
-                onSuccess()
+                val updates = mutableMapOf<String, Any?>()
+                group.members.forEach { (memberUid, isMember) ->
+                    if (isMember) {
+                        updates["userGroups/$memberUid/${group.id}"] = true
+                    }
+                }
+                database.reference
+                    .updateChildren(updates)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener { indexError ->
+                        groupRef.removeValue()
+                            .addOnSuccessListener {
+                                onFailure(
+                                    IllegalStateException(
+                                        "Group indexing failed. Group creation was rolled back.",
+                                        indexError
+                                    )
+                                )
+                            }
+                            .addOnFailureListener { cleanupError ->
+                                onFailure(
+                                    IllegalStateException(
+                                        "Group indexing and cleanup failed. Group ${group.id} may still exist. Index error: ${indexError.message}",
+                                        cleanupError
+                                    )
+                                )
+                            }
+                    }
             }
             .addOnFailureListener { error ->
                 onFailure(error)
             }
     }
 
-
     fun getGroup(
         uid: String,
         onSuccess: (List<GlimpseGroup>) -> Unit,
         onFailure: (Exception) -> Unit
-    ){
-        groupsRef.get()
-            .addOnSuccessListener { snapshot ->
-
-                val groups = snapshot.children.mapNotNull { child ->
-                    val group = child.getValue(GlimpseGroup::class.java)
-
-                    if (group != null && group.members.containsKey(uid)) {
-                        group
-                    } else {
-                        null
-                    }
-                }
-
-                onSuccess(groups)
-            }
-            .addOnFailureListener {
-                onFailure(it)
-            }
+    ) {
+        getIndexedGroups(
+            uid = uid,
+            onSuccess = onSuccess,
+            onFailure = onFailure
+        )
     }
 
     fun getIndexedGroups(
@@ -938,48 +943,151 @@ class FirebaseRepository {
                 onFailure(error)
             }
     }
+
     fun addMembersToGroup(
         groupId: String,
         uid: String,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        val updates = mapOf<String, Any>(
-            "groups/$groupId/members/$uid" to true,
-            "userGroups/$uid/$groupId" to true
-        )
-        database.reference
-            .updateChildren(updates)
-            .addOnSuccessListener {
-                onSuccess()
+        val currentUid = com.google.firebase.auth.FirebaseAuth
+            .getInstance().currentUser?.uid
+        if (currentUid == null) {
+            onFailure(IllegalStateException("User not signed in"))
+            return
+        }
+        val groupRef = groupsRef.child(groupId)
+        val memberRef = groupRef.child("members").child(uid)
+        val indexRef = database.reference
+            .child("userGroups")
+            .child(uid)
+            .child(groupId)
+        groupRef.get()
+            .addOnSuccessListener { snapshot ->
+                if (!snapshot.exists()) {
+                    onFailure(IllegalStateException("Group not found"))
+                    return@addOnSuccessListener
+                }
+                val creatorUid = snapshot.child("createdBy")
+                    .getValue(String::class.java)
+
+                if (creatorUid != currentUid) {
+                    onFailure(
+                        IllegalStateException(
+                            "Only the group creator can add members"
+                        )
+                    )
+                    return@addOnSuccessListener
+                }
+                val alreadyMember = snapshot.child("members")
+                    .child(uid)
+                    .getValue(Boolean::class.java) == true
+                if (alreadyMember) {
+                    indexRef.setValue(true)
+                        .addOnSuccessListener { onSuccess() }
+                        .addOnFailureListener { onFailure(it) }
+
+                    return@addOnSuccessListener
+                }
+                memberRef.setValue(true)
+                    .addOnSuccessListener {
+                        indexRef.setValue(true)
+                            .addOnSuccessListener {
+                                onSuccess()
+                            }
+                            .addOnFailureListener { indexError ->
+                                memberRef.removeValue()
+                                    .addOnSuccessListener {
+                                        onFailure(
+                                            IllegalStateException(
+                                                "Adding the member failed; membership was rolled back.",
+                                                indexError
+                                            )
+                                        )
+                                    }
+                                    .addOnFailureListener { rollbackError ->
+                                        onFailure(
+                                            IllegalStateException(
+                                                "Indexing failed and membership rollback also failed. Check group $groupId.",
+                                                rollbackError
+                                            )
+                                        )
+                                    }
+                            }
+                    }
+                    .addOnFailureListener { error ->
+                        onFailure(error)
+                    }
             }
             .addOnFailureListener { error ->
                 onFailure(error)
             }
     }
-
-
     fun removeMemberFromGroup(
         groupId: String,
         uid: String,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        val updates = mapOf<String, Any?>(
-            "groups/$groupId/members/$uid" to null,
-            "userGroups/$uid/$groupId" to null
-        )
-        database.reference
-            .updateChildren(updates)
-            .addOnSuccessListener {
-                onSuccess()
+        val currentUid = com.google.firebase.auth.FirebaseAuth
+            .getInstance().currentUser?.uid
+        if (currentUid == null) {
+            onFailure(IllegalStateException("User not signed in"))
+            return
+        }
+        groupsRef.child(groupId).get()
+            .addOnSuccessListener { snapshot ->
+                if (!snapshot.exists()) {
+                    onFailure(IllegalStateException("Group not found"))
+                    return@addOnSuccessListener
+                }
+                val creatorUid = snapshot.child("createdBy")
+                    .getValue(String::class.java)
+                if (creatorUid != currentUid) {
+                    onFailure(
+                        IllegalStateException(
+                            "Only the group creator can remove members"
+                        )
+                    )
+                    return@addOnSuccessListener
+                }
+                if (uid == creatorUid) {
+                    onFailure(
+                        IllegalStateException(
+                            "The group creator cannot remove themselves"
+                        )
+                    )
+                    return@addOnSuccessListener
+                }
+                val isMember = snapshot.child("members")
+                    .child(uid)
+                    .getValue(Boolean::class.java) == true
+
+                if (!isMember) {
+                    onFailure(
+                        IllegalStateException(
+                            "This user is not a group member"
+                        )
+                    )
+                    return@addOnSuccessListener
+                }
+                val updates = mapOf<String, Any?>(
+                    "groups/$groupId/members/$uid" to null,
+                    "userGroups/$uid/$groupId" to null
+                )
+                database.reference
+                    .updateChildren(updates)
+                    .addOnSuccessListener {
+                        onSuccess()
+                    }
+                    .addOnFailureListener { error ->
+                        onFailure(error)
+                    }
             }
             .addOnFailureListener { error ->
                 onFailure(error)
             }
     }
-
-
     fun deleteGroup(
         groupId: String,
         onSuccess: () -> Unit,
