@@ -35,7 +35,10 @@
     "fcmTokens": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "auth != null && auth.uid === $uid",
+        "$tokenId": {
+          ".validate": "newData.val() === true"
+        }
       }
     },
     "SavedPlaces": {
@@ -148,14 +151,104 @@
     "groups": {
       "$groupId": {
         ".read": "auth != null && data.child('members').child(auth.uid).val() === true",
-        ".write": "auth != null && ((!data.exists() && newData.child('ownerUid').val() === auth.uid && newData.child('id').val() === $groupId && newData.child('members').child(auth.uid).val() === true) || (data.exists() && data.child('ownerUid').val() === auth.uid && newData.child('ownerUid').val() === auth.uid && newData.child('id').val() === $groupId))"
+        ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('createdBy').val() === auth.uid && newData.child('id').val() === $groupId && newData.child('members').child(auth.uid).val() === true && !newData.child('sharing').exists()) || (data.exists() && data.child('createdBy').val() === auth.uid && !newData.exists()))",
+        ".validate": "newData.hasChildren(['id','createdBy','createdAt','name','type','members'])",
+        "id": {
+          ".validate": "newData.isString() && newData.val() === $groupId"
+        },
+        "createdBy": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        },
+        "name": {
+          ".write": "auth != null && auth.uid === data.parent().child('createdBy').val() && newData.exists()",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        "type": {
+          ".write": "auth != null && auth.uid === data.parent().child('createdBy').val() && newData.exists()",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+        },
+        "members": {
+          "$memberUid": {
+            ".write": "auth != null && auth.uid === data.parent().parent().child('createdBy').val() && ($memberUid !== auth.uid || newData.val() === true)",
+            ".validate": "newData.val() === true && (data.val() === true || $memberUid === auth.uid || (root.child('connections').child(auth.uid).child($memberUid).child('status').val() === 'connected' && root.child('connections').child($memberUid).child(auth.uid).child('status').val() === 'connected'))"
+          }
+        },
+        "sharing": {
+          "$memberUid": {
+            ".write": "auth != null && auth.uid === $memberUid && data.parent().parent().child('members').child($memberUid).val() === true",
+            ".validate": "newData.hasChildren(['location','profile','locationHistory'])",
+            "location": {
+              ".validate": "newData.isBoolean()"
+            },
+            "profile": {
+              ".validate": "newData.isBoolean()"
+            },
+            "locationHistory": {
+              ".validate": "newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "userGroups": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$groupId": {
+          ".write": "auth != null && root.child('groups').child($groupId).child('createdBy').val() === auth.uid && ((newData.val() === true && root.child('groups').child($groupId).child('members').child($uid).val() === true) || (data.val() === true && !newData.exists()))",
+          ".validate": "newData.val() === true"
+        }
       }
     },
     "sosEvents": {
       "$senderUid": {
         "$eventId": {
-          ".read": "auth != null && (auth.uid === $senderUid || data.child('recipients').child(auth.uid).val() === true)",
-          ".write": "auth != null && auth.uid === $senderUid && newData.exists() && newData.child('senderUid').val() === $senderUid"
+          ".read": "auth != null && (auth.uid === $senderUid || data.child('recipientUids').child(auth.uid).val() === true)",
+          ".write": "auth != null && auth.uid === $senderUid && !data.exists() && newData.exists() && newData.child('id').val() === $eventId && newData.child('userUid').val() === $senderUid && newData.child('status').val() === 'active' && newData.child('createdAt').isNumber() && newData.child('createdAt').val() >= now - 300000 && newData.child('createdAt').val() <= now + 30000 && newData.child('updatedAt').val() === newData.child('createdAt').val() && newData.child('recipientUids').hasChildren()",
+          ".validate": "newData.hasChildren(['id','userUid','createdAt','updatedAt','status','recipientUids'])",
+          "id": {
+            ".validate": "newData.isString() && newData.val() === $eventId"
+          },
+          "userUid": {
+            ".validate": "newData.isString() && newData.val() === $senderUid"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "status": {
+            ".write": "auth != null && auth.uid === $senderUid && data.parent().child('userUid').val() === $senderUid && data.val() === 'active' && (newData.val() === 'cancelled' || newData.val() === 'resolved') && newData.parent().child('updatedAt').isNumber() && newData.parent().child('updatedAt').val() > data.parent().child('updatedAt').val() && newData.parent().child('updatedAt').val() >= now - 300000 && newData.parent().child('updatedAt').val() <= now + 30000",
+            ".validate": "newData.val() === 'active' || newData.val() === 'cancelled' || newData.val() === 'resolved'"
+          },
+          "updatedAt": {
+            ".write": "auth != null && auth.uid === $senderUid && data.parent().child('userUid').val() === $senderUid && data.parent().child('status').val() === 'active' && (newData.parent().child('status').val() === 'cancelled' || newData.parent().child('status').val() === 'resolved') && newData.isNumber() && newData.val() > data.val() && newData.val() >= now - 300000 && newData.val() <= now + 30000",
+            ".validate": "newData.isNumber()"
+          },
+          "latitude": {
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "longitude": {
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "locationTimestamp": {
+            ".validate": "newData.isNumber()"
+          },
+          "recipientUids": {
+            ".validate": "newData.hasChildren()",
+            "$contactUid": {
+              ".validate": "newData.val() === true && (data.val() === true || root.child('emergencyContacts').child($senderUid).child($contactUid).child('status').val() === 'accepted')"
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
@@ -191,7 +284,7 @@
       "$contactUid": {
         ".read": "auth != null && auth.uid === $contactUid",
         "$requesterUid": {
-          ".write": "auth != null && $requesterUid !== $contactUid && ((auth.uid === $requesterUid && !data.exists() && newData.val() === true && root.child('connections').child($requesterUid).child($contactUid).child('status').val() === 'connected' && root.child('connections').child($contactUid).child($requesterUid).child('status').val() === 'connected') || (auth.uid === $contactUid && data.exists() && !newData.exists()))",
+          ".write": "auth != null && $requesterUid !== $contactUid && ((auth.uid === $requesterUid && !data.exists() && newData.val() === true && root.child('connections').child($requesterUid).child($contactUid).child('status').val() === 'connected' && root.child('connections').child($contactUid).child($requesterUid).child('status').val() === 'connected' && root.child('emergencyContacts').child($requesterUid).child($contactUid).child('status').val() === 'pending') || (auth.uid === $contactUid && data.exists() && !newData.exists()))",
           ".validate": "newData.val() === true"
         }
       }
