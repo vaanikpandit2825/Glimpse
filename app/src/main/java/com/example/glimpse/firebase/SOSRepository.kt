@@ -10,9 +10,8 @@ import com.google.firebase.database.Transaction
 
 class SOSRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val database: FirebaseDatabase = FirebaseDatabase.getInstance(
-        "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
-    )
+    private val database: FirebaseDatabase = 
+GlimpseDatabase.instance
 ) {
     private val locationRef = database.getReference("locations")
     private val connectionRef = database.getReference("connections")
