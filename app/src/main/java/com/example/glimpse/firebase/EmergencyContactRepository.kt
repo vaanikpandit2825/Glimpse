@@ -11,7 +11,8 @@ class EmergencyContactRepository {
     private val auth: FirebaseAuth =
         FirebaseAuth.getInstance()
     private val database: DatabaseReference =
-        FirebaseDatabase.getInstance("https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app").reference
+        
+GlimpseDatabase.instance.reference
     private val emergencyContactsRef: DatabaseReference =
         database.child("emergencyContacts")
     private fun currentUserUid(): String? {
