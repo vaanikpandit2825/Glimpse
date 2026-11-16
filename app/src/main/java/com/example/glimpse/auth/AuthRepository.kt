@@ -4,14 +4,14 @@ import com.example.glimpse.firebase.FirebaseRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.example.glimpse.firebase.FCMTokenRepository
+import com.example.glimpse.firebase.GlimpseDatabase
 
 class AuthRepository {
 
     private val auth = FirebaseAuth.getInstance()
 
-    private val database = FirebaseDatabase.getInstance(
-        "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
-    )
+    private val database = 
+GlimpseDatabase.instance
 
     private val firebaseRepository=FirebaseRepository()
 
