@@ -6,9 +6,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 
 class FCMTokenRepository {
     private val auth = FirebaseAuth.getInstance()
-    private val database = FirebaseDatabase.getInstance(
-        "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
-    )
+    private val database = 
+GlimpseDatabase.instance
     fun registerCurrentDevice(
         onSuccess: () -> Unit = {},
         onFailure: (Exception) -> Unit = {}
