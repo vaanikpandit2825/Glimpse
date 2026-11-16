@@ -18,9 +18,8 @@ import com.example.glimpse.model.GroupMember
 
 class FirebaseRepository {
 
-    private val database = FirebaseDatabase.getInstance(
-        "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
-    )
+    private val database = 
+GlimpseDatabase.instance
     private val locationsRef = database.getReference("locations")
     private val profilesRef = database.getReference("profiles")
     private val glimpseIdsRef = database.getReference("glimpseIds")
