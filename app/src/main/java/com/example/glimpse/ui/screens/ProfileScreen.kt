@@ -420,6 +420,9 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(28.dp))
 
+                    EmergencyPhoneSettingsCard()
+                    Spacer(modifier=Modifier.height(28.dp))
+
                     Text(
                         text = "Privacy",
                         fontSize = 20.sp
