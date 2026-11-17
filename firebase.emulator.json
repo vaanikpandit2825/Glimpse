@@ -1,5 +1,8 @@
 
 {
+  "functions": {
+    "source": "functions"
+  },
   "database": {
     "rules": "database.rules.draft.json"
   },
@@ -9,6 +12,9 @@
     },
     "database": {
       "port": 9000
+    },
+    "functions": {
+      "port": 5001
     },
     "ui": {
       "enabled": true,
