@@ -1,65 +1,63 @@
+
 package com.example.glimpse.firebase
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.example.glimpse.MainActivity
 import com.example.glimpse.R
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
-
 class GlimpseMessagingService : FirebaseMessagingService() {
+
+    private fun isDebugBuild(): Boolean {
+        return (applicationInfo.flags and
+                ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        saveFcmToken(token)
 
-        val uid = com.google.firebase.auth.FirebaseAuth
-            .getInstance()
-            .currentUser
-            ?.uid ?: return
+        // Firebase Cloud Messaging has no local emulator.
+        // Never register an FCM token during debug testing.
+        if (isDebugBuild()) {
+            Log.d("GLIMPSE_FCM", "Debug: token registration skipped")
+            return
+        }
 
-        val database = com.google.firebase.database.FirebaseDatabase
-            .getInstance(
-                "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
-            )
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
-        database.getReference("fcmTokens")
+        GlimpseDatabase.instance
+            .getReference("fcmTokens")
             .child(uid)
             .child(token)
             .setValue(true)
-    }
-
-    private fun saveFcmToken(token: String) {
-        val uid = com.google.firebase.auth.FirebaseAuth
-            .getInstance()
-            .currentUser
-            ?.uid ?: return
-
-        val database = com.google.firebase.database.FirebaseDatabase
-            .getInstance(
-                "https://glimpse-e0aab-default-rtdb.asia-southeast1.firebasedatabase.app"
-            )
-
-        database.getReference("fcmTokens")
-            .child(uid)
-            .child(token)
-            .setValue(true)
+            .addOnFailureListener { exception ->
+                Log.e("GLIMPSE_FCM", "Token registration failed", exception)
+            }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
 
-        android.util.Log.d(
-            "GLIMPSE_FCM",
-            "Received data keys: ${message.data.keys}"
-        )
+        // Ignore real FCM messages in local debug builds.
+        if (isDebugBuild()) {
+            Log.d("GLIMPSE_FCM", "Debug: remote FCM message ignored")
+            return
+        }
 
         val title = message.notification?.title
             ?: message.data["title"]
@@ -79,8 +77,6 @@ class GlimpseMessagingService : FirebaseMessagingService() {
             eventId = eventId
         )
     }
-
-
 
     private fun showNotification(
         title: String,
@@ -115,11 +111,15 @@ class GlimpseMessagingService : FirebaseMessagingService() {
             }
         }
 
+        val notificationId =
+            (eventId ?: System.currentTimeMillis().toString()).hashCode()
+
         val pendingIntent = PendingIntent.getActivity(
             this,
-            (eventId ?: System.currentTimeMillis().toString()).hashCode(),
+            notificationId,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                    PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(this, channelId)
@@ -135,16 +135,13 @@ class GlimpseMessagingService : FirebaseMessagingService() {
 
         if (
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            androidx.core.content.ContextCompat.checkSelfPermission(
+            ContextCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.POST_NOTIFICATIONS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
         ) {
-            NotificationManagerCompat.from(this).notify(
-                (eventId ?: System.currentTimeMillis().toString()).hashCode(),
-                notification
-            )
+            NotificationManagerCompat.from(this)
+                .notify(notificationId, notification)
         }
     }
-
 }
