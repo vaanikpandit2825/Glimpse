@@ -276,6 +276,14 @@
           },
           "$other": {
             ".validate": false
+          },
+          "sosPhoneSettings": {
+            ".read": false,
+            ".write": false
+          },
+          "sosCallRounds": {
+            ".read": false,
+            ".write": false
           }
         }
       }
