@@ -96,4 +96,5 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.zxing.core)
     implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-functions")
 }
