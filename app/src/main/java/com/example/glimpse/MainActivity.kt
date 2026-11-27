@@ -2,6 +2,7 @@
 package com.example.glimpse
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -20,16 +21,20 @@ import androidx.compose.runtime.setValue
 class MainActivity : ComponentActivity() {
 
     private var incomingSenderUid by mutableStateOf<String?>(null)
+
     private var incomingEventId by mutableStateOf<String?>(null)
+
     private val notificationPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         requestNotificationPermission()
+
         CloudinaryConfig.initialize(this)
 
         if (!Places.isInitialized()) {
@@ -39,8 +44,7 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        incomingSenderUid = intent.getStringExtra("senderUid")
-        incomingEventId = intent.getStringExtra("eventId")
+        handleIncomingSos(intent)
 
         setContent {
             GlimpseTheme {
@@ -52,20 +56,55 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onNewIntent(intent: android.content.Intent) {
+    override fun onNewIntent(intent: Intent) {
+
         super.onNewIntent(intent)
+
         setIntent(intent)
+
+        handleIncomingSos(intent)
+    }
+
+    private fun handleIncomingSos(intent: Intent?) {
+
+        val senderUid =
+            intent?.getStringExtra("senderUid")
+
+        val eventId =
+            intent?.getStringExtra("eventId")
+
+        val validKey = Regex("[A-Za-z0-9_-]{1,128}")
+
+        if (
+            senderUid != null &&
+            eventId != null &&
+            validKey.matches(senderUid) &&
+            validKey.matches(eventId)
+        ) {
+            incomingSenderUid = senderUid
+            incomingEventId = eventId
+        }
     }
 
     private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val permission = Manifest.permission.POST_NOTIFICATIONS
+
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
+
+            val permission =
+                Manifest.permission.POST_NOTIFICATIONS
 
             if (
-                ContextCompat.checkSelfPermission(this, permission) !=
-                PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(
+                    this,
+                    permission
+                ) != PackageManager.PERMISSION_GRANTED
             ) {
-                notificationPermissionLauncher.launch(permission)
+                notificationPermissionLauncher.launch(
+                    permission
+                )
             }
         }
     }
