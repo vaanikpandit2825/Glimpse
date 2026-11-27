@@ -50,6 +50,7 @@ import com.example.glimpse.ui.screens.SafetyScreen
 import androidx.compose.runtime.LaunchedEffect
 import com.example.glimpse.ui.screens.EmergencyContactsScreen
 import com.example.glimpse.ui.screens.AddEmergencyContactScreen
+import com.example.glimpse.ui.screens.SosRecipientScreen
 
 @Composable
 fun AppNavigation(
@@ -642,19 +643,20 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onAddContact = {
-                    navController.navigate("addEmergencyContact"){
-                        launchSingleTop=true
+                    navController.navigate("addEmergencyContact") {
+                        launchSingleTop = true
                     }
                 }
             )
         }
-        composable("addEmergencyContact"){
+        composable("addEmergencyContact") {
             AddEmergencyContactScreen(
                 onBack = {
                     navController.popBackStack()
                 }
             )
         }
+
 
 
         composable(
@@ -668,15 +670,20 @@ fun AppNavigation(
                 }
             )
         ) { backStackEntry ->
-            SafetyScreen(
+
+            val senderUid = backStackEntry.arguments
+                ?.getString("senderUid")
+                ?: return@composable
+
+            val eventId = backStackEntry.arguments
+                ?.getString("eventId")
+                ?: return@composable
+
+            SosRecipientScreen(
                 navController = navController,
-                incomingSenderUid = backStackEntry.arguments
-                    ?.getString("senderUid"),
-                incomingEventId = backStackEntry.arguments
-                    ?.getString("eventId")
+                senderUid = senderUid,
+                eventId = eventId
             )
         }
-
-
     }
 }
