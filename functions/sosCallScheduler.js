@@ -17,6 +17,7 @@ const MAX_CALL_ROUNDS = 5;
 const CALL_RETRY_SECONDS = 90;
 const MAX_RECIPIENTS = 5;
 const MAX_SOS_AGE_MS = 15 * 60 * 1000;
+const ROUND_RECOVERY_TIMEOUT_MS = 180 * 1000;
 
 function validKey(value) {
   return (
@@ -31,7 +32,10 @@ async function getEligibleCallRecipients(
   senderUid,
   eventId
 ) {
-  if (!validKey(senderUid) || !validKey(eventId)) {
+  if (
+    !validKey(senderUid) ||
+    !validKey(eventId)
+  ) {
     return [];
   }
 
@@ -42,13 +46,17 @@ async function getEligibleCallRecipients(
     ackSnapshot,
     contactsSnapshot
   ] = await Promise.all([
-    db.ref(`sosEvents/${senderUid}/${eventId}`).get(),
+    db.ref(
+      `sosEvents/${senderUid}/${eventId}`
+    ).get(),
 
     db.ref(
       `sosAcknowledgements/${senderUid}/${eventId}`
     ).get(),
 
-    db.ref(`emergencyContacts/${senderUid}`).get()
+    db.ref(
+      `emergencyContacts/${senderUid}`
+    ).get()
   ]);
 
   const sos = eventSnapshot.val();
@@ -82,18 +90,28 @@ async function getEligibleCallRecipients(
       uid !== senderUid &&
       requested[uid] === true &&
       contacts[uid]?.status === "accepted"
-    )
-    .slice(0, MAX_RECIPIENTS);
+    );
 
   const recipients = [];
 
+  const usedPhoneNumbers = new Set();
+
   for (const recipientUid of recipientUids) {
+
+    if (recipients.length >= MAX_RECIPIENTS) {
+      break;
+    }
 
     try {
       const phoneNumber =
         await getVerifiedEmergencyPhone(recipientUid);
 
-      if (phoneNumber) {
+      if (
+        phoneNumber &&
+        !usedPhoneNumbers.has(phoneNumber)
+      ) {
+        usedPhoneNumbers.add(phoneNumber);
+
         recipients.push({
           recipientUid,
           phoneNumber
@@ -117,11 +135,13 @@ async function runCallRound({
   round,
   placeCall
 }) {
-
   if (
+    !validKey(senderUid) ||
+    !validKey(eventId) ||
     !Number.isInteger(round) ||
     round < 1 ||
-    round > MAX_CALL_ROUNDS
+    round > MAX_CALL_ROUNDS ||
+    typeof placeCall !== "function"
   ) {
     return;
   }
@@ -133,9 +153,11 @@ async function runCallRound({
     );
 
   if (recipients.length === 0) {
+
     logger.info(
       "No eligible SOS call recipients remain"
     );
+
     return;
   }
 
@@ -145,29 +167,71 @@ async function runCallRound({
     `sosCallRounds/${senderUid}/${eventId}/${round}`
   );
 
-  // Prevent duplicate processing of the same round.
-  const claim = await roundRef.transaction(current => {
+  const claim = await roundRef.transaction(
+    current => {
+      if (current !== null) return;
 
-    if (current !== null) {
-      return;
-    }
-
-    return {
-      status: "processing",
-      startedAt: Date.now()
-    };
-
-  }, undefined, false);
+      return {
+        status: "processing",
+        startedAt: Date.now()
+      };
+    },
+    undefined,
+    false
+  );
 
   if (!claim.committed) {
     return;
   }
+  if (!claim.committed) {
+
+    const existing = claim.snapshot.val();
+
+    if (!existing) {
+      return;
+    }
+
+    const age = Date.now() - existing.startedAt;
+
+    const interrupted =
+      existing.status === "processing" &&
+      Number.isFinite(age) &&
+      age >= ROUND_RECOVERY_TIMEOUT_MS;
+
+    const schedulingFailed =
+      existing.status === "finished" &&
+      existing.nextRoundStatus === "scheduling_failed";
+
+    if (interrupted || schedulingFailed) {
+
+      await roundRef.transaction(current => {
+
+        if (
+          !current ||
+          current.startedAt !== existing.startedAt ||
+          current.status !== existing.status ||
+          current.nextRoundStatus !== existing.nextRoundStatus
+        ) {
+          return;
+        }
+
+        return {
+          ...current,
+          recoveryRequired: true,
+          recoveryDetectedAt: Date.now()
+        };
+      });
+    }
+
+    return;
+  }
 
   let attempted = 0;
+  let failed = 0;
+  let skipped = 0;
 
   for (const recipient of recipients) {
 
-    // Recheck consent, acknowledgment and event status.
     const eligible =
       await getEligibleCallRecipients(
         senderUid,
@@ -180,32 +244,44 @@ async function runCallRound({
     );
 
     if (!currentRecipient) {
+      skipped++;
       continue;
     }
 
     try {
-
       const result = await placeCall({
         senderUid,
         eventId,
-        recipientUid: currentRecipient.recipientUid,
-        phoneNumber: currentRecipient.phoneNumber,
+        recipientUid:
+          currentRecipient.recipientUid,
+
+        phoneNumber:
+          currentRecipient.phoneNumber,
+
         round
       });
 
-      if (!result.skipped) {
+      if (result.skipped) {
+        skipped++;
+      } else {
         attempted++;
       }
 
     } catch (error) {
 
-      logger.warn("SOS call attempt failed");
+      failed++;
+
+      logger.warn(
+        "SOS call attempt failed"
+      );
     }
   }
 
   await roundRef.update({
     status: "finished",
     attempted,
+    failed,
+    skipped,
     finishedAt: Date.now()
   });
 
@@ -215,10 +291,33 @@ async function runCallRound({
       eventId
     );
 
-  if (
-    remaining.length > 0 &&
-    round < MAX_CALL_ROUNDS
-  ) {
+  if (remaining.length === 0) {
+
+    await roundRef.update({
+      nextRoundStatus: "not_required"
+    });
+
+    return;
+  }
+
+  if (round >= MAX_CALL_ROUNDS) {
+
+    await roundRef.update({
+      nextRoundStatus: "retry_limit_reached"
+    });
+
+    logger.warn(
+      "SOS telephone retry limit reached"
+    );
+
+    return;
+  }
+
+  await roundRef.update({
+    nextRoundStatus: "scheduling"
+  });
+
+  try {
 
     await getFunctions()
       .taskQueue("advanceSos")
@@ -230,9 +329,24 @@ async function runCallRound({
           round: round + 1
         },
         {
-          scheduleDelaySeconds: CALL_RETRY_SECONDS
+          scheduleDelaySeconds:
+            CALL_RETRY_SECONDS
         }
       );
+
+    await roundRef.update({
+      nextRoundStatus: "scheduled",
+      nextRound: round + 1,
+      nextRoundScheduledAt: Date.now()
+    });
+
+  } catch (error) {
+
+    await roundRef.update({
+      nextRoundStatus: "scheduling_failed"
+    });
+
+    throw error;
   }
 }
 
